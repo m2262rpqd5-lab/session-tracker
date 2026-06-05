@@ -92,9 +92,8 @@ export default function CalendarPage() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
 
-  const syncUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/api/calendar/shortcuts-sync`
-    : "http://localhost:3000/api/calendar/shortcuts-sync";
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://session-tracker-six.vercel.app";
+  const syncUrl = `${origin}/api/calendar/shortcuts-sync?secret=my-session-tracker-secret&title=`;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -187,50 +186,41 @@ export default function CalendarPage() {
           <Step n={1} title='Open Shortcuts → New Shortcut → add "Find Calendar Events"'>
             <p className="text-sm text-gray-500">
               Set the filter: <strong className="text-gray-700">Start Date is in the last 1 day</strong>.
-              Optionally add a calendar filter (e.g. your "Clients" calendar) to avoid noise.
+              Add a calendar filter to select only your client session calendar.
             </p>
           </Step>
 
           <Step n={2} title='Add "Repeat with Each Item in Calendar Events"'>
-            <p className="text-sm text-gray-500">Everything inside this loop runs once per event found.</p>
+            <p className="text-sm text-gray-500">Everything inside the loop runs once per event.</p>
           </Step>
 
-          <Step n={3} title='Inside the loop, add "Get Contents of URL" with these values'>
+          <Step n={3} title='Inside the loop, add "Get Contents of URL" — paste URL below, then append Repeat Item'>
             <div className="space-y-3">
-              <CopyField label="URL" value={syncUrl} mono />
-              <CopyField label="Method" value="POST" />
               <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Headers — add two</div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg divide-y divide-gray-100 overflow-hidden text-sm font-mono">
-                  <div className="flex items-center px-3 py-2 gap-3">
-                    <span className="text-gray-400 w-36 shrink-0">x-sync-secret</span>
-                    <span className="text-gray-700">dev-secret</span>
-                  </div>
-                  <div className="flex items-center px-3 py-2 gap-3">
-                    <span className="text-gray-400 w-36 shrink-0">Content-Type</span>
-                    <span className="text-gray-700">application/json</span>
-                  </div>
+                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">URL — copy this, then add the variable at the end</div>
+                <CopyField label="" value={syncUrl} mono />
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 space-y-1">
+                  <div className="font-medium">After pasting the URL:</div>
+                  <ol className="list-decimal pl-4 space-y-0.5 text-amber-700">
+                    <li>Click at the very end of the URL field (after <code className="bg-amber-100 px-1 rounded text-xs">title=</code>)</li>
+                    <li>Click the <strong>variable icon</strong> (looks like a magic wand or ✦) that appears</li>
+                    <li>Select <strong>"Repeat Item"</strong> from the list</li>
+                    <li>That's it — no body, no headers needed!</li>
+                  </ol>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm font-mono text-gray-600">
+                  <span className="text-gray-400">...shortcuts-sync?secret=...&title=</span><span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Repeat Item</span>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Request Body — select JSON, add two keys</div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg divide-y divide-gray-100 overflow-hidden text-sm">
-                  <div className="flex items-center px-3 py-2.5 gap-3">
-                    <span className="font-mono text-gray-500 w-24 shrink-0">title</span>
-                    <span className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-1 rounded-md">Repeat Item · Title</span>
-                  </div>
-                  <div className="flex items-center px-3 py-2.5 gap-3">
-                    <span className="font-mono text-gray-500 w-24 shrink-0">startDate</span>
-                    <span className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-1 rounded-md">Repeat Item · Start Date</span>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400">Tap each value field and pick the blue variable from the Repeat Item.</p>
+              <div>
+                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Method</div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono">GET</div>
               </div>
             </div>
           </Step>
 
           <Step n={4} title='Add "End Repeat", name the Shortcut "Sync Sessions", run it once'>
-            <p className="text-sm text-gray-500">Use the test area below to confirm an event comes through before automating.</p>
+            <p className="text-sm text-gray-500">Use the test area below first to confirm everything works before running the full Shortcut.</p>
           </Step>
 
           <Step n={5} title="Automate: Shortcuts → Automation → New Automation → Time of Day">

@@ -1,14 +1,18 @@
 /**
  * Shortcuts-friendly sync endpoint.
- * Accepts ISO date strings instead of unix timestamps and auto-generates
- * deterministic event IDs from title + date so Shortcuts doesn't need to
- * supply a persistent ID.
  *
- * Expected body (single event from a Shortcut loop):
- *   { "title": "Session - Jane Smith", "startDate": "2026-06-05T10:00:00" }
+ * SIMPLE usage (recommended for Apple Shortcuts):
+ *   GET /api/calendar/shortcuts-sync?secret=YOUR_SECRET&title=EVENT_TITLE
  *
- * Or a batch (for the Python script):
- *   { "events": [{ "title": "...", "startDate": "..." }, ...] }
+ * In the Shortcut's "Get Contents of URL" field, type:
+ *   https://session-tracker-six.vercel.app/api/calendar/shortcuts-sync?secret=my-session-tracker-secret&title=
+ * …then append the "Repeat Item" variable immediately after the = sign.
+ * No JSON body, no custom headers needed.
+ *
+ * ADVANCED usage (JSON body, for batch/Python script):
+ *   POST with body: { "title": "...", "startDate": "..." }
+ *   or             { "events": [{ "title": "...", "startDate": "..." }] }
+ *   Requires header: x-sync-secret: YOUR_SECRET
  */
 import { prisma } from "@/lib/db";
 import { NextRequest } from "next/server";
@@ -17,22 +21,22 @@ import crypto from "crypto";
 
 const SYNC_SECRET = process.env.SYNC_SECRET || "dev-secret";
 
-type ShortcutEvent = {
-  title: string;
-  startDate: string; // ISO 8601
-};
-
 function deterministicId(title: string, startDate: string) {
   return "sc-" + crypto.createHash("sha1").update(`${title}|${startDate}`).digest("hex").slice(0, 16);
 }
 
-async function processEvent(event: ShortcutEvent, clients: { id: string; name: string }[]) {
-  const eventDate = new Date(event.title ? event.startDate : "");
-  const calendarEventId = deterministicId(event.title, event.startDate);
-  const parsedDate = new Date(event.startDate);
+async function processEvent(
+  title: string,
+  startDate: string,
+  clients: { id: string; name: string }[]
+) {
+  if (!title?.trim()) return "invalid";
 
-  if (isNaN(parsedDate.getTime())) return "invalid";
-  if (parsedDate > new Date()) return "future";
+  const parsedDate = new Date(startDate);
+  const eventDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+  const calendarEventId = deterministicId(title, eventDate.toISOString().slice(0, 10));
+
+  if (eventDate > new Date()) return "future";
 
   const existingSession = await prisma.session.findUnique({ where: { calendarEventId } });
   if (existingSession) return "duplicate";
@@ -42,19 +46,19 @@ async function processEvent(event: ShortcutEvent, clients: { id: string; name: s
     if (existingPending.status === "PENDING") {
       await prisma.pendingCalendarEvent.update({
         where: { id: existingPending.id },
-        data: { eventDate: parsedDate, eventTitle: event.title },
+        data: { eventDate, eventTitle: title },
       });
     }
     return "duplicate";
   }
 
-  const match = matchEventToClient(event.title, clients);
+  const match = matchEventToClient(title, clients);
 
   await prisma.pendingCalendarEvent.create({
     data: {
       calendarEventId,
-      eventTitle: event.title,
-      eventDate: parsedDate,
+      eventTitle: title,
+      eventDate,
       suggestedClientId: match?.client.id ?? null,
       matchConfidence: match?.confidence ?? null,
       status: "PENDING",
@@ -64,6 +68,35 @@ async function processEvent(event: ShortcutEvent, clients: { id: string; name: s
   return match ? "matched" : "unmatched";
 }
 
+// ── GET (simple Shortcuts usage) ──────────────────────────────────────────────
+export async function GET(req: NextRequest) {
+  const { searchParams } = req.nextUrl;
+  const secret = searchParams.get("secret");
+  const title = searchParams.get("title");
+
+  if (secret !== SYNC_SECRET) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!title?.trim()) {
+    return Response.json({ error: "title is required" }, { status: 400 });
+  }
+
+  const clients = await prisma.client.findMany({ select: { id: true, name: true } });
+  const result = await processEvent(title, new Date().toISOString(), clients);
+
+  await prisma.calendarSyncLog.create({
+    data: {
+      eventsScanned: 1,
+      eventsMatched: result === "matched" ? 1 : 0,
+      eventsPending: result === "unmatched" ? 1 : 0,
+      eventsSkipped: ["duplicate", "future", "invalid"].includes(result) ? 1 : 0,
+    },
+  });
+
+  return Response.json({ ok: true, result });
+}
+
+// ── POST (JSON body, for batch / Python script) ────────────────────────────────
 export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-sync-secret");
   if (secret !== SYNC_SECRET) {
@@ -73,17 +106,20 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const clients = await prisma.client.findMany({ select: { id: true, name: true } });
 
-  // Support both single event and batch
-  const events: ShortcutEvent[] = Array.isArray(body.events)
+  const events: { title: string; startDate?: string }[] = Array.isArray(body.events)
     ? body.events
     : [{ title: body.title, startDate: body.startDate }];
 
   const counts = { scanned: 0, matched: 0, unmatched: 0, skipped: 0 };
 
   for (const event of events) {
-    if (!event.title || !event.startDate) { counts.skipped++; continue; }
+    if (!event.title?.trim()) { counts.skipped++; continue; }
     counts.scanned++;
-    const result = await processEvent(event, clients);
+    const result = await processEvent(
+      event.title,
+      event.startDate || new Date().toISOString(),
+      clients
+    );
     if (result === "matched") counts.matched++;
     else if (result === "unmatched") counts.unmatched++;
     else counts.skipped++;
