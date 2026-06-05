@@ -47,7 +47,11 @@ export default async function ClientDetailPage({
             {client.phone && <span>{client.phone}</span>}
           </div>
         </div>
-        <ClientActions client={client} templates={templates} activePackage={activePackage ?? null} />
+        <ClientActions
+          client={{ id: client.id, name: client.name, isArchived: client.isArchived }}
+          templates={templates}
+          activePackage={activePackage ?? null}
+        />
       </div>
 
       {/* Active Package Card */}

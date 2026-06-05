@@ -10,6 +10,7 @@ import { startOfMonth, endOfMonth } from "date-fns";
 
 async function getDashboard() {
   const clients = await prisma.client.findMany({
+    where: { isArchived: false },
     orderBy: { name: "asc" },
     include: {
       packages: {

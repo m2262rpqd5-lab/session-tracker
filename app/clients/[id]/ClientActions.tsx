@@ -5,7 +5,7 @@ import { Modal } from "@/components/Modal";
 
 type Template = { id: string; name: string; sessionCount: number; price: number };
 type Pkg = { id: string; name: string; status: string };
-type Client = { id: string; name: string };
+type Client = { id: string; name: string; isArchived: boolean };
 
 export default function ClientActions({
   client,
@@ -18,20 +18,42 @@ export default function ClientActions({
 }) {
   const router = useRouter();
   const [modal, setModal] = useState<"session" | "payment" | "package" | "adjustment" | null>(null);
+  const [archiving, setArchiving] = useState(false);
   const close = () => setModal(null);
   const refresh = () => { close(); router.refresh(); };
+
+  async function toggleArchive() {
+    if (!confirm(client.isArchived
+      ? `Unarchive ${client.name}? They'll reappear on the dashboard.`
+      : `Archive ${client.name}? They'll be hidden from the dashboard.`
+    )) return;
+    setArchiving(true);
+    await fetch(`/api/clients/${client.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isArchived: !client.isArchived }),
+    });
+    setArchiving(false);
+    router.push("/clients");
+    router.refresh();
+  }
 
   return (
     <>
       <div className="flex gap-2 flex-wrap justify-end">
-        {activePackage && (
+        {!client.isArchived && activePackage && (
           <>
             <Btn onClick={() => setModal("session")} color="blue">Log Session</Btn>
             <Btn onClick={() => setModal("payment")} color="green">Add Payment</Btn>
             <Btn onClick={() => setModal("adjustment")} color="orange">Adjustment</Btn>
           </>
         )}
-        <Btn onClick={() => setModal("package")} color="gray">Assign Package</Btn>
+        {!client.isArchived && (
+          <Btn onClick={() => setModal("package")} color="gray">Assign Package</Btn>
+        )}
+        <Btn onClick={toggleArchive} color={client.isArchived ? "green" : "red"} disabled={archiving}>
+          {archiving ? "…" : client.isArchived ? "Unarchive" : "Archive"}
+        </Btn>
       </div>
 
       {/* Log Session */}
@@ -57,17 +79,19 @@ export default function ClientActions({
   );
 }
 
-function Btn({ onClick, children, color }: { onClick: () => void; children: React.ReactNode; color: string }) {
+function Btn({ onClick, children, color, disabled }: { onClick: () => void; children: React.ReactNode; color: string; disabled?: boolean }) {
   const colors: Record<string, string> = {
     blue: "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200",
     green: "bg-green-50 text-green-700 hover:bg-green-100 border-green-200",
     orange: "bg-orange-50 text-orange-700 hover:bg-orange-100 border-orange-200",
     gray: "bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200",
+    red: "bg-red-50 text-red-600 hover:bg-red-100 border-red-200",
   };
   return (
     <button
       onClick={onClick}
-      className={`text-sm border px-3 py-1.5 rounded-lg transition-colors ${colors[color]}`}
+      disabled={disabled}
+      className={`text-sm border px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 ${colors[color]}`}
     >
       {children}
     </button>
