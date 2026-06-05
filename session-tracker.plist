@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Starts Session Tracker automatically when you log in to your Mac.
+
+  Install (one time):
+    cp session-tracker.plist ~/Library/LaunchAgents/com.sessiontracker.app.plist
+    launchctl load ~/Library/LaunchAgents/com.sessiontracker.app.plist
+
+  Open the app:
+    http://localhost:3000
+
+  Check logs if something's wrong:
+    cat /tmp/session-tracker.log
+    cat /tmp/session-tracker-error.log
+
+  Stop / uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.sessiontracker.app.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.sessiontracker.app</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Users/boristatar/session-tracker/node_modules/.bin/next</string>
+    <string>start</string>
+    <string>--port</string>
+    <string>3000</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/boristatar/session-tracker</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>NODE_ENV</key>
+    <string>production</string>
+    <key>SYNC_SECRET</key>
+    <string>dev-secret</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/session-tracker.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/session-tracker-error.log</string>
+
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+</dict>
+</plist>
