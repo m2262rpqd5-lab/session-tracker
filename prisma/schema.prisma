@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  packages             ClientPackage[]
+  PendingCalendarEvent PendingCalendarEvent[]
+}
+
+model PackageTemplate {
+  id           String   @id @default(cuid())
+  name         String
+  sessionCount Int
+  price        Float
+  validityDays Int?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  clientPackages ClientPackage[]
+}
+
+model ClientPackage {
+  id            String    @id @default(cuid())
+  clientId      String
+  templateId    String?
+  name          String
+  totalSessions Int
+  usedSessions  Int       @default(0)
+  startDate     DateTime  @default(now())
+  expiryDate    DateTime?
+  status        String    @default("ACTIVE")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  client      Client           @relation(fields: [clientId], references: [id])
+  template    PackageTemplate? @relation(fields: [templateId], references: [id])
+  sessions    Session[]
+  payments    Payment[]
+  adjustments Adjustment[]
+}
+
+model Session {
+  id              String   @id @default(cuid())
+  clientPackageId String
+  sessionDate     DateTime
+  notes           String?
+  source          String   @default("MANUAL")
+  calendarEventId String?  @unique
+  createdAt       DateTime @default(now())
+
+  clientPackage ClientPackage @relation(fields: [clientPackageId], references: [id])
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  clientPackageId String
+  amount          Float
+  paymentDate     DateTime @default(now())
+  method          String?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  clientPackage ClientPackage @relation(fields: [clientPackageId], references: [id])
+}
+
+model Adjustment {
+  id              String   @id @default(cuid())
+  clientPackageId String
+  delta           Int
+  reason          String
+  adjustedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  clientPackage ClientPackage @relation(fields: [clientPackageId], references: [id])
+}
+
+model CalendarSyncLog {
+  id            String   @id @default(cuid())
+  syncedAt      DateTime @default(now())
+  eventsScanned Int
+  eventsMatched Int
+  eventsPending Int
+  eventsSkipped Int
+  error         String?
+}
+
+model PendingCalendarEvent {
+  id                String   @id @default(cuid())
+  calendarEventId   String   @unique
+  eventTitle        String
+  eventDate         DateTime
+  suggestedClientId String?
+  matchConfidence   Float?
+  status            String   @default("PENDING")
+  createdAt         DateTime @default(now())
+
+  suggestedClient Client? @relation(fields: [suggestedClientId], references: [id])
+}

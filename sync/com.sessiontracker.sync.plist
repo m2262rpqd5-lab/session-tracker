@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent: runs sync_calendar.py every 15 minutes.
+
+  Install:
+    1. Edit ProgramArguments path below to your actual script location.
+    2. cp com.sessiontracker.sync.plist ~/Library/LaunchAgents/
+    3. launchctl load ~/Library/LaunchAgents/com.sessiontracker.sync.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.sessiontracker.sync.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.sessiontracker.sync</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/YOUR_USERNAME/session-tracker/sync/sync_calendar.py</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>SYNC_SECRET</key>
+    <string>dev-secret</string>
+    <key>SESSION_TRACKER_URL</key>
+    <string>http://localhost:3000</string>
+  </dict>
+
+  <key>StartInterval</key>
+  <integer>900</integer>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/sessiontracker-sync.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/sessiontracker-sync-error.log</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
