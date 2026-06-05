@@ -21,10 +21,30 @@ type SyncLog = {
   eventsSkipped: number;
 };
 
+function copyToClipboard(text: string) {
+  // Preferred: async Clipboard API
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    return;
+  }
+  fallbackCopy(text);
+}
+
+function fallbackCopy(text: string) {
+  const el = document.createElement("textarea");
+  el.value = text;
+  el.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0";
+  document.body.appendChild(el);
+  el.focus();
+  el.select();
+  document.execCommand("copy");
+  document.body.removeChild(el);
+}
+
 function CopyField({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   const [copied, setCopied] = useState(false);
   function copy() {
-    navigator.clipboard.writeText(value);
+    copyToClipboard(value);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
