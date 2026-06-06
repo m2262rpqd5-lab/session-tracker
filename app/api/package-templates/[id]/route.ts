@@ -1,6 +1,19 @@
 import { prisma } from "@/lib/db";
 import { NextRequest } from "next/server";
 
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const inUse = await prisma.clientPackage.findFirst({ where: { templateId: id } });
+  if (inUse) {
+    return Response.json({ error: "Template is in use by one or more client packages" }, { status: 409 });
+  }
+  await prisma.packageTemplate.delete({ where: { id } });
+  return new Response(null, { status: 204 });
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

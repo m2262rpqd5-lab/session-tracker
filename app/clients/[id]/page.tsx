@@ -6,6 +6,7 @@ import { computeRemaining, computeTotalPaid } from "@/lib/package-utils";
 import StatusBadge from "@/components/StatusBadge";
 import SessionProgress from "@/components/SessionProgress";
 import ClientActions from "./ClientActions";
+import SessionDeleteButton from "./SessionDeleteButton";
 
 export default async function ClientDetailPage({
   params,
@@ -130,6 +131,7 @@ export default async function ClientDetailPage({
                     <span className="text-gray-700">Session</span>
                     <span className="text-xs text-gray-400">{s.source === "CALENDAR_SYNC" ? "· calendar" : "· manual"}</span>
                     {s.notes && <span className="text-gray-400 text-xs truncate max-w-32">· {s.notes}</span>}
+                    <SessionDeleteButton sessionId={s.id} />
                   </div>
                   <span className="text-gray-400 text-xs">{format(new Date(s.sessionDate), "MMM d, yyyy")}</span>
                 </div>

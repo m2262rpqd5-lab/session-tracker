@@ -54,6 +54,17 @@ export default function PackagesPage() {
     load();
   }
 
+  async function deleteTemplate(t: Template) {
+    if (!confirm(`Delete template "${t.name}"? This cannot be undone.`)) return;
+    const res = await fetch(`/api/package-templates/${t.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const d = await res.json();
+      alert(d.error);
+      return;
+    }
+    load();
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -72,6 +83,7 @@ export default function PackagesPage() {
               <th className="text-left px-5 py-3 font-medium text-gray-500">Price</th>
               <th className="text-left px-5 py-3 font-medium text-gray-500">Valid For</th>
               <th className="text-left px-5 py-3 font-medium text-gray-500">Status</th>
+              <th className="px-5 py-3" />
             </tr>
           </thead>
           <tbody>
@@ -85,6 +97,12 @@ export default function PackagesPage() {
                   <button onClick={() => toggle(t)}
                     className={`text-xs font-medium px-2 py-0.5 rounded-full transition-colors ${t.isActive ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>
                     {t.isActive ? "Active" : "Inactive"}
+                  </button>
+                </td>
+                <td className="px-5 py-4 text-right">
+                  <button onClick={() => deleteTemplate(t)}
+                    className="text-xs text-red-400 hover:text-red-600">
+                    Delete
                   </button>
                 </td>
               </tr>
