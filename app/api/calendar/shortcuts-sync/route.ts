@@ -19,7 +19,7 @@ import { NextRequest } from "next/server";
 import { matchEventToClient } from "@/lib/calendar-matcher";
 import crypto from "crypto";
 
-const SYNC_SECRET = process.env.SYNC_SECRET || "dev-secret";
+const SYNC_SECRET = process.env.SYNC_SECRET || "my-session-tracker-secret";
 
 function deterministicId(title: string, startDate: string) {
   return "sc-" + crypto.createHash("sha1").update(`${title}|${startDate}`).digest("hex").slice(0, 16);
@@ -73,6 +73,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const secret = searchParams.get("secret");
   const title = searchParams.get("title");
+  const date = searchParams.get("date");
 
   if (secret !== SYNC_SECRET) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -82,7 +83,7 @@ export async function GET(req: NextRequest) {
   }
 
   const clients = await prisma.client.findMany({ select: { id: true, name: true } });
-  const result = await processEvent(title, new Date().toISOString(), clients);
+  const result = await processEvent(title, date || new Date().toISOString(), clients);
 
   await prisma.calendarSyncLog.create({
     data: {

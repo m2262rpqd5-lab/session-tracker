@@ -194,22 +194,22 @@ export default function CalendarPage() {
             <p className="text-sm text-gray-500">Everything inside the loop runs once per event.</p>
           </Step>
 
-          <Step n={3} title='Inside the loop, add "Get Contents of URL" — paste URL below, then append Repeat Item'>
+          <Step n={3} title='Inside the loop, add "Get Contents of URL" — build the URL with two variables'>
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">URL — copy this, then add the variable at the end</div>
+                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Base URL — paste this first</div>
                 <CopyField label="" value={syncUrl} mono />
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 space-y-1">
-                  <div className="font-medium">After pasting the URL:</div>
-                  <ol className="list-decimal pl-4 space-y-0.5 text-amber-700">
-                    <li>Click at the very end of the URL field (after <code className="bg-amber-100 px-1 rounded text-xs">title=</code>)</li>
-                    <li>Click the <strong>variable icon</strong> (looks like a magic wand or ✦) that appears</li>
-                    <li>Select <strong>"Repeat Item"</strong> from the list</li>
-                    <li>That's it — no body, no headers needed!</li>
+                  <div className="font-medium">After pasting the URL, add two variables:</div>
+                  <ol className="list-decimal pl-4 space-y-1 text-amber-700">
+                    <li>Click after <code className="bg-amber-100 px-1 rounded text-xs">title=</code>, tap the variable icon (✦), choose <strong>"Repeat Item's Title"</strong></li>
+                    <li>Then type <code className="bg-amber-100 px-1 rounded text-xs">&date=</code> at the end, tap the variable icon again, choose <strong>"Repeat Item's Start Date"</strong></li>
                   </ol>
+                  <div className="text-amber-600 text-xs mt-1">The date variable is required — without it every session is logged as today.</div>
                 </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm font-mono text-gray-600">
-                  <span className="text-gray-400">...shortcuts-sync?secret=...&title=</span><span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Repeat Item</span>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm font-mono text-gray-600 break-all">
+                  <span className="text-gray-400">...&title=</span><span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Repeat Item's Title</span>
+                  <span className="text-gray-400">&date=</span><span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Repeat Item's Start Date</span>
                 </div>
               </div>
               <div>
