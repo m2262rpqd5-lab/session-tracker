@@ -70,16 +70,17 @@ export default function PackagesPage() {
     load();
   }
 
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Package Templates</h1>
-        <button onClick={() => setModal(true)} className="text-sm bg-gray-900 text-white px-4 py-1.5 rounded-lg hover:bg-gray-700">
-          + New Template
-        </button>
-      </div>
+  const gbpTemplates = templates.filter((t) => t.currency === "GBP");
+  const sarTemplates = templates.filter((t) => t.currency === "SAR");
 
+  function TemplateTable({ list, currency }: { list: Template[]; currency: string }) {
+    const label = currency === "GBP" ? "£ GBP" : "﷼ SAR";
+    const accent = currency === "GBP" ? "text-green-700 bg-green-50 border-green-200" : "text-blue-700 bg-blue-50 border-blue-200";
+    return (
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className={`px-5 py-3 border-b border-gray-100 flex items-center justify-between`}>
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${accent}`}>{label}</span>
+        </div>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
@@ -95,10 +96,10 @@ export default function PackagesPage() {
             {!loaded && (
               <tr><td colSpan={6} className="px-5 py-6 text-sm text-gray-400 text-center">Loading…</td></tr>
             )}
-            {loaded && templates.length === 0 && (
-              <tr><td colSpan={6} className="px-5 py-6 text-sm text-gray-400 text-center italic">No templates yet.</td></tr>
+            {loaded && list.length === 0 && (
+              <tr><td colSpan={6} className="px-5 py-6 text-sm text-gray-400 text-center italic">No {currency} templates yet — click + New Template to add one.</td></tr>
             )}
-            {templates.map((t) => (
+            {list.map((t) => (
               <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
                 <td className="px-5 py-4 font-medium text-gray-900">{t.name}</td>
                 <td className="px-5 py-4 text-gray-600">{t.sessionCount}</td>
@@ -111,16 +112,27 @@ export default function PackagesPage() {
                   </button>
                 </td>
                 <td className="px-5 py-4 text-right">
-                  <button onClick={() => deleteTemplate(t)}
-                    className="text-xs text-red-400 hover:text-red-600">
-                    Delete
-                  </button>
+                  <button onClick={() => deleteTemplate(t)} className="text-xs text-red-400 hover:text-red-600">Delete</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">Package Templates</h1>
+        <button onClick={() => setModal(true)} className="text-sm bg-gray-900 text-white px-4 py-1.5 rounded-lg hover:bg-gray-700">
+          + New Template
+        </button>
+      </div>
+
+      <TemplateTable list={gbpTemplates} currency="GBP" />
+      <TemplateTable list={sarTemplates} currency="SAR" />
 
       <Modal open={modal} onClose={() => setModal(false)} title="New Package Template">
         <form onSubmit={submit} className="space-y-4">
