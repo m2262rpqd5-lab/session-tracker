@@ -20,13 +20,14 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const body = await req.json();
-  const { name, sessionCount, price, validityDays, isActive } = body;
+  const { name, sessionCount, price, currency, validityDays, isActive } = body;
   const template = await prisma.packageTemplate.update({
     where: { id },
     data: {
       ...(name !== undefined && { name }),
       ...(sessionCount !== undefined && { sessionCount: Number(sessionCount) }),
       ...(price !== undefined && { price: Number(price) }),
+      ...(currency !== undefined && { currency }),
       ...(validityDays !== undefined && { validityDays: validityDays ? Number(validityDays) : null }),
       ...(isActive !== undefined && { isActive }),
     },

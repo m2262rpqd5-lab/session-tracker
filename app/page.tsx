@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Users, PoundSterling, CalendarCheck, AlertCircle } from "lucide-react";
+import { Users, CalendarCheck, AlertCircle } from "lucide-react";
+import RevenueCards from "@/components/RevenueCards";
 import StatusBadge from "@/components/StatusBadge";
 import SessionProgress from "@/components/SessionProgress";
 import { prisma } from "@/lib/db";
@@ -83,19 +84,6 @@ export default async function DashboardPage() {
 
   const { clients, revenueThisMonthByCurrency, totalRevenueByCurrency, activeClientCount, pendingCalendarEvents } = data;
 
-  // Build per-currency revenue cards
-  const allCurrencies = Array.from(new Set([
-    ...Object.keys(revenueThisMonthByCurrency),
-    ...Object.keys(totalRevenueByCurrency),
-  ]));
-  // If no payments yet, show at least GBP
-  const currencies = allCurrencies.length > 0 ? allCurrencies : ["GBP"];
-
-  function CurrencyIcon({ currency }: { currency: string }) {
-    if (currency === "GBP") return <PoundSterling size={18} />;
-    return <span className="text-base font-bold leading-none">﷼</span>;
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -121,27 +109,8 @@ export default async function DashboardPage() {
           <div className="text-xs text-gray-500 mt-0.5">Active Clients</div>
         </div>
 
-        {/* Revenue This Month — one card per currency */}
-        {currencies.map((cur) => (
-          <div key={`month-${cur}`} className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="text-green-600 mb-2"><CurrencyIcon currency={cur} /></div>
-            <div className="text-2xl font-bold text-gray-900">
-              {formatCurrency(revenueThisMonthByCurrency[cur] ?? 0, cur)}
-            </div>
-            <div className="text-xs text-gray-500 mt-0.5">This Month · {cur}</div>
-          </div>
-        ))}
-
-        {/* Total Revenue — one card per currency */}
-        {currencies.map((cur) => (
-          <div key={`total-${cur}`} className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="text-emerald-600 mb-2"><CurrencyIcon currency={cur} /></div>
-            <div className="text-2xl font-bold text-gray-900">
-              {formatCurrency(totalRevenueByCurrency[cur] ?? 0, cur)}
-            </div>
-            <div className="text-xs text-gray-500 mt-0.5">Total Revenue · {cur}</div>
-          </div>
-        ))}
+        {/* Revenue cards with GBP/SAR toggle */}
+        <RevenueCards thisMonth={revenueThisMonthByCurrency} total={totalRevenueByCurrency} />
 
         {/* Pending Sync */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">

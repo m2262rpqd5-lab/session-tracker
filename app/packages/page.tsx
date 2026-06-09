@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/Modal";
+import { CURRENCIES, formatCurrency } from "@/lib/currency";
 
 type Template = {
   id: string;
   name: string;
   sessionCount: number;
   price: number;
+  currency: string;
   validityDays: number | null;
   isActive: boolean;
 };
@@ -14,7 +16,7 @@ type Template = {
 export default function PackagesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ name: "", sessionCount: "", price: "", validityDays: "" });
+  const [form, setForm] = useState({ name: "", sessionCount: "", price: "", currency: "GBP", validityDays: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -35,13 +37,14 @@ export default function PackagesPage() {
         name: form.name,
         sessionCount: Number(form.sessionCount),
         price: Number(form.price),
+        currency: form.currency,
         validityDays: form.validityDays ? Number(form.validityDays) : null,
       }),
     });
     setSaving(false);
     if (!res.ok) { const d = await res.json(); setError(d.error); return; }
     setModal(false);
-    setForm({ name: "", sessionCount: "", price: "", validityDays: "" });
+    setForm({ name: "", sessionCount: "", price: "", currency: "GBP", validityDays: "" });
     load();
   }
 
@@ -91,7 +94,7 @@ export default function PackagesPage() {
               <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
                 <td className="px-5 py-4 font-medium text-gray-900">{t.name}</td>
                 <td className="px-5 py-4 text-gray-600">{t.sessionCount}</td>
-                <td className="px-5 py-4 text-gray-600">${t.price.toLocaleString()}</td>
+                <td className="px-5 py-4 text-gray-600">{formatCurrency(t.price, t.currency)}</td>
                 <td className="px-5 py-4 text-gray-600">{t.validityDays ? `${t.validityDays} days` : "—"}</td>
                 <td className="px-5 py-4">
                   <button onClick={() => toggle(t)}
@@ -117,8 +120,6 @@ export default function PackagesPage() {
           {[
             { key: "name", label: "Name", type: "text", required: true },
             { key: "sessionCount", label: "Number of Sessions", type: "number", required: true },
-            { key: "price", label: "Price ($)", type: "number", required: true },
-            { key: "validityDays", label: "Valid for (days, leave blank = no expiry)", type: "number", required: false },
           ].map(({ key, label, type, required }) => (
             <div key={key}>
               <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
@@ -131,6 +132,37 @@ export default function PackagesPage() {
               />
             </div>
           ))}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+              <input
+                type="number"
+                required
+                value={form.price}
+                onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+              <select
+                value={form.currency}
+                onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              >
+                {CURRENCIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Valid for (days, leave blank = no expiry)</label>
+            <input
+              type="number"
+              value={form.validityDays}
+              onChange={(e) => setForm((f) => ({ ...f, validityDays: e.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+            />
+          </div>
           <button type="submit" disabled={saving}
             className="w-full bg-gray-900 text-white text-sm py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50">
             {saving ? "Saving…" : "Create Template"}
