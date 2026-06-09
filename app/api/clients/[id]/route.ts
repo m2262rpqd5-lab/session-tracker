@@ -53,6 +53,19 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  await prisma.client.delete({ where: { id } });
+
+  // Manually delete children in order to handle DBs without cascade support
+  const packages = await prisma.clientPackage.findMany({ where: { clientId: id }, select: { id: true } });
+  const pkgIds = packages.map((p) => p.id);
+
+  await prisma.$transaction([
+    prisma.pendingCalendarEvent.deleteMany({ where: { suggestedClientId: id } }),
+    prisma.session.deleteMany({ where: { clientPackageId: { in: pkgIds } } }),
+    prisma.payment.deleteMany({ where: { clientPackageId: { in: pkgIds } } }),
+    prisma.adjustment.deleteMany({ where: { clientPackageId: { in: pkgIds } } }),
+    prisma.clientPackage.deleteMany({ where: { clientId: id } }),
+    prisma.client.delete({ where: { id } }),
+  ]);
+
   return new Response(null, { status: 204 });
 }
