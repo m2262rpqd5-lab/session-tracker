@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Archive } from "lucide-react";
+import DeleteClientButton from "./DeleteClientButton";
 
 export default async function ClientsPage({
   searchParams,
@@ -69,10 +70,10 @@ export default async function ClientsPage({
                   {c.email && <div className="text-xs text-gray-400">{c.email}</div>}
                 </div>
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="flex items-center gap-3">
                 {showArchived
-                  ? <span className="italic text-gray-300">Archived</span>
-                  : c.packages.length > 0 ? "Active package" : <span className="italic text-gray-300">No package</span>}
+                  ? <DeleteClientButton clientId={c.id} clientName={c.name} />
+                  : <span className="text-sm text-gray-500">{c.packages.length > 0 ? "Active package" : <span className="italic text-gray-300">No package</span>}</span>}
               </div>
             </Link>
           ))}
