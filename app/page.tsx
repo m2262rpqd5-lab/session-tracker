@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Users, DollarSign, CalendarCheck, AlertCircle } from "lucide-react";
+import { Users, PoundSterling, CalendarCheck, AlertCircle } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import SessionProgress from "@/components/SessionProgress";
 import { prisma } from "@/lib/db";
@@ -42,10 +42,6 @@ async function getDashboard() {
   const revenueThisMonthByCurrency = groupByCurrency(paymentsThisMonth);
   const totalRevenueByCurrency = groupByCurrency(allPayments);
 
-  function formatRevenue(byCurrency: Record<string, number>) {
-    const parts = Object.entries(byCurrency).map(([cur, amt]) => formatCurrency(amt, cur));
-    return parts.length ? parts.join(" · ") : formatCurrency(0, "GBP");
-  }
   const pendingCalendarEvents = await prisma.pendingCalendarEvent.count({ where: { status: "PENDING" } });
 
   const clientSummaries = clients.map((client) => {
@@ -75,8 +71,8 @@ async function getDashboard() {
 
   return {
     clients: clientSummaries,
-    revenueThisMonth: formatRevenue(revenueThisMonthByCurrency),
-    totalRevenue: formatRevenue(totalRevenueByCurrency),
+    revenueThisMonthByCurrency,
+    totalRevenueByCurrency,
     activeClientCount: clients.filter((c) => c.packages.some((p) => p.status === "ACTIVE")).length,
     pendingCalendarEvents,
   };
@@ -85,7 +81,20 @@ async function getDashboard() {
 export default async function DashboardPage() {
   const data = await getDashboard();
 
-  const { clients, revenueThisMonth, totalRevenue, activeClientCount, pendingCalendarEvents } = data;
+  const { clients, revenueThisMonthByCurrency, totalRevenueByCurrency, activeClientCount, pendingCalendarEvents } = data;
+
+  // Build per-currency revenue cards
+  const allCurrencies = Array.from(new Set([
+    ...Object.keys(revenueThisMonthByCurrency),
+    ...Object.keys(totalRevenueByCurrency),
+  ]));
+  // If no payments yet, show at least GBP
+  const currencies = allCurrencies.length > 0 ? allCurrencies : ["GBP"];
+
+  function CurrencyIcon({ currency }: { currency: string }) {
+    if (currency === "GBP") return <PoundSterling size={18} />;
+    return <span className="text-base font-bold leading-none">﷼</span>;
+  }
 
   return (
     <div className="space-y-6">
@@ -105,18 +114,41 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Active Clients", value: activeClientCount, icon: Users, color: "text-blue-600" },
-          { label: "Revenue This Month", value: revenueThisMonth, icon: DollarSign, color: "text-green-600" },
-          { label: "Total Revenue", value: totalRevenue, icon: DollarSign, color: "text-emerald-600" },
-          { label: "Pending Sync", value: pendingCalendarEvents, icon: CalendarCheck, color: "text-amber-600" },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className={`${color} mb-2`}><Icon size={18} /></div>
-            <div className="text-2xl font-bold text-gray-900">{value}</div>
-            <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+        {/* Active Clients */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="text-blue-600 mb-2"><Users size={18} /></div>
+          <div className="text-2xl font-bold text-gray-900">{activeClientCount}</div>
+          <div className="text-xs text-gray-500 mt-0.5">Active Clients</div>
+        </div>
+
+        {/* Revenue This Month — one card per currency */}
+        {currencies.map((cur) => (
+          <div key={`month-${cur}`} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="text-green-600 mb-2"><CurrencyIcon currency={cur} /></div>
+            <div className="text-2xl font-bold text-gray-900">
+              {formatCurrency(revenueThisMonthByCurrency[cur] ?? 0, cur)}
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5">This Month · {cur}</div>
           </div>
         ))}
+
+        {/* Total Revenue — one card per currency */}
+        {currencies.map((cur) => (
+          <div key={`total-${cur}`} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="text-emerald-600 mb-2"><CurrencyIcon currency={cur} /></div>
+            <div className="text-2xl font-bold text-gray-900">
+              {formatCurrency(totalRevenueByCurrency[cur] ?? 0, cur)}
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5">Total Revenue · {cur}</div>
+          </div>
+        ))}
+
+        {/* Pending Sync */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="text-amber-600 mb-2"><CalendarCheck size={18} /></div>
+          <div className="text-2xl font-bold text-gray-900">{pendingCalendarEvents}</div>
+          <div className="text-xs text-gray-500 mt-0.5">Pending Sync</div>
+        </div>
       </div>
 
       {clients.length === 0 ? (
