@@ -15,6 +15,7 @@ type Template = {
 
 export default function PackagesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ name: "", sessionCount: "", price: "", currency: "GBP", validityDays: "" });
   const [saving, setSaving] = useState(false);
@@ -23,6 +24,7 @@ export default function PackagesPage() {
   async function load() {
     const res = await fetch("/api/package-templates");
     setTemplates(await res.json());
+    setLoaded(true);
   }
   useEffect(() => { load(); }, []);
 
@@ -90,6 +92,12 @@ export default function PackagesPage() {
             </tr>
           </thead>
           <tbody>
+            {!loaded && (
+              <tr><td colSpan={6} className="px-5 py-6 text-sm text-gray-400 text-center">Loading…</td></tr>
+            )}
+            {loaded && templates.length === 0 && (
+              <tr><td colSpan={6} className="px-5 py-6 text-sm text-gray-400 text-center italic">No templates yet.</td></tr>
+            )}
             {templates.map((t) => (
               <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
                 <td className="px-5 py-4 font-medium text-gray-900">{t.name}</td>

@@ -101,7 +101,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Active Clients */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="text-blue-600 mb-2"><Users size={18} /></div>
