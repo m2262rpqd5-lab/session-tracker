@@ -45,6 +45,16 @@ async function getDashboard() {
 
   const pendingCalendarEvents = await prisma.pendingCalendarEvent.count({ where: { status: "PENDING" } });
 
+  // Live GBP → SAR exchange rate
+  let gbpToSar = 4.73; // fallback
+  try {
+    const fx = await fetch("https://api.exchangerate-api.com/v4/latest/GBP", { next: { revalidate: 3600 } });
+    if (fx.ok) {
+      const fxData = await fx.json();
+      gbpToSar = fxData.rates?.SAR ?? gbpToSar;
+    }
+  } catch {}
+
   const clientSummaries = clients.map((client) => {
     const activePackage = client.packages.find((p) => p.status === "ACTIVE") ?? client.packages[0] ?? null;
     const allPaid = client.packages.reduce((sum, p) => sum + computeTotalPaid(p), 0);
@@ -74,6 +84,7 @@ async function getDashboard() {
     clients: clientSummaries,
     revenueThisMonthByCurrency,
     totalRevenueByCurrency,
+    gbpToSar,
     activeClientCount: clients.filter((c) => c.packages.some((p) => p.status === "ACTIVE")).length,
     pendingCalendarEvents,
   };
@@ -82,7 +93,7 @@ async function getDashboard() {
 export default async function DashboardPage() {
   const data = await getDashboard();
 
-  const { clients, revenueThisMonthByCurrency, totalRevenueByCurrency, activeClientCount, pendingCalendarEvents } = data;
+  const { clients, revenueThisMonthByCurrency, totalRevenueByCurrency, gbpToSar, activeClientCount, pendingCalendarEvents } = data;
 
   return (
     <div className="space-y-6">
@@ -101,7 +112,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Active Clients */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="text-blue-600 mb-2"><Users size={18} /></div>
@@ -109,8 +120,8 @@ export default async function DashboardPage() {
           <div className="text-xs text-gray-500 mt-0.5">Active Clients</div>
         </div>
 
-        {/* Revenue cards with GBP/SAR toggle */}
-        <RevenueCards thisMonth={revenueThisMonthByCurrency} total={totalRevenueByCurrency} />
+        {/* Revenue cards — GBP with live SAR conversion */}
+        <RevenueCards thisMonth={revenueThisMonthByCurrency} total={totalRevenueByCurrency} gbpToSar={gbpToSar} />
 
         {/* Pending Sync */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
