@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CURRENCIES } from "@/lib/currency";
 
 export default function NewClientPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "", currency: "GBP" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,6 +49,18 @@ export default function NewClientPage() {
             />
           </div>
         ))}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+          <select
+            value={form.currency}
+            onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
           <textarea

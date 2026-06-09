@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { computeRemaining, computeTotalPaid } from "@/lib/package-utils";
+import { formatCurrency } from "@/lib/currency";
 import StatusBadge from "@/components/StatusBadge";
 import SessionProgress from "@/components/SessionProgress";
 import ClientActions from "./ClientActions";
@@ -49,7 +50,7 @@ export default async function ClientDetailPage({
           </div>
         </div>
         <ClientActions
-          client={{ id: client.id, name: client.name, isArchived: client.isArchived }}
+          client={{ id: client.id, name: client.name, isArchived: client.isArchived, currency: client.currency }}
           templates={templates}
           activePackage={activePackage ?? null}
         />
@@ -86,7 +87,7 @@ export default async function ClientDetailPage({
             </div>
             <div>
               <div className="text-xs text-gray-400">Total Paid</div>
-              <div className="font-semibold text-gray-900">${computeTotalPaid(activePackage).toLocaleString()}</div>
+              <div className="font-semibold text-gray-900">{formatCurrency(computeTotalPaid(activePackage), client.currency)}</div>
             </div>
           </div>
         </div>
@@ -118,7 +119,7 @@ export default async function ClientDetailPage({
                     {p.notes && <span className="text-gray-400">· {p.notes}</span>}
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-green-600 font-medium">+${p.amount.toLocaleString()}</span>
+                    <span className="text-green-600 font-medium">+{formatCurrency(p.amount, client.currency)}</span>
                     <span className="text-gray-400 text-xs">{format(new Date(p.paymentDate), "MMM d, yyyy")}</span>
                   </div>
                 </div>

@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/Modal";
+import { CURRENCIES, formatCurrency } from "@/lib/currency";
 
 type Template = { id: string; name: string; sessionCount: number; price: number };
 type Pkg = { id: string; name: string; status: string };
-type Client = { id: string; name: string; isArchived: boolean };
+type Client = { id: string; name: string; isArchived: boolean; currency: string };
 
 export default function ClientActions({
   client,
@@ -17,7 +18,7 @@ export default function ClientActions({
   activePackage: Pkg | null;
 }) {
   const router = useRouter();
-  const [modal, setModal] = useState<"session" | "payment" | "package" | "adjustment" | null>(null);
+  const [modal, setModal] = useState<"session" | "payment" | "package" | "adjustment" | "currency" | null>(null);
   const [archiving, setArchiving] = useState(false);
   const close = () => setModal(null);
   const refresh = () => { close(); router.refresh(); };
@@ -51,6 +52,9 @@ export default function ClientActions({
         {!client.isArchived && (
           <Btn onClick={() => setModal("package")} color="gray">Assign Package</Btn>
         )}
+        <Btn onClick={() => setModal("currency")} color="gray">
+          {client.currency === "GBP" ? "£ GBP" : "﷼ SAR"}
+        </Btn>
         <Btn onClick={toggleArchive} color={client.isArchived ? "green" : "red"} disabled={archiving}>
           {archiving ? "…" : client.isArchived ? "Unarchive" : "Archive"}
         </Btn>
@@ -74,6 +78,11 @@ export default function ClientActions({
       {/* Adjustment */}
       <Modal open={modal === "adjustment"} onClose={close} title="Add Adjustment">
         <AdjustmentForm packageId={activePackage?.id ?? ""} onDone={refresh} />
+      </Modal>
+
+      {/* Currency */}
+      <Modal open={modal === "currency"} onClose={close} title="Change Currency">
+        <CurrencyForm clientId={client.id} current={client.currency} onDone={refresh} />
       </Modal>
     </>
   );
@@ -267,6 +276,41 @@ function AssignPackageForm({ clientId, templates, onDone }: { clientId: string; 
       <button type="submit" disabled={saving}
         className="w-full bg-gray-900 text-white text-sm py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50">
         {saving ? "Assigning…" : "Assign Package"}
+      </button>
+    </form>
+  );
+}
+
+function CurrencyForm({ clientId, current, onDone }: { clientId: string; current: string; onDone: () => void }) {
+  const [currency, setCurrency] = useState(current);
+  const [saving, setSaving] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    await fetch(`/api/clients/${clientId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currency }),
+    });
+    setSaving(false);
+    onDone();
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+        <select value={currency} onChange={(e) => setCurrency(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">
+          {CURRENCIES.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
+      </div>
+      <button type="submit" disabled={saving}
+        className="w-full bg-gray-900 text-white text-sm py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50">
+        {saving ? "Saving…" : "Save"}
       </button>
     </form>
   );

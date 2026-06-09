@@ -6,6 +6,7 @@ import StatusBadge from "@/components/StatusBadge";
 import SessionProgress from "@/components/SessionProgress";
 import { prisma } from "@/lib/db";
 import { computeRemaining, computeTotalPaid } from "@/lib/package-utils";
+import { formatCurrency } from "@/lib/currency";
 import { startOfMonth, endOfMonth } from "date-fns";
 
 async function getDashboard() {
@@ -23,10 +24,28 @@ async function getDashboard() {
   const now = new Date();
   const paymentsThisMonth = await prisma.payment.findMany({
     where: { paymentDate: { gte: startOfMonth(now), lte: endOfMonth(now) } },
+    include: { clientPackage: { include: { client: { select: { currency: true } } } } },
   });
-  const revenueThisMonth = paymentsThisMonth.reduce((s, p) => s + p.amount, 0);
-  const allPayments = await prisma.payment.findMany();
-  const totalRevenue = allPayments.reduce((s, p) => s + p.amount, 0);
+  const allPayments = await prisma.payment.findMany({
+    include: { clientPackage: { include: { client: { select: { currency: true } } } } },
+  });
+
+  // Group revenue by currency
+  function groupByCurrency(payments: typeof allPayments) {
+    const map: Record<string, number> = {};
+    for (const p of payments) {
+      const cur = p.clientPackage.client.currency ?? "GBP";
+      map[cur] = (map[cur] ?? 0) + p.amount;
+    }
+    return map;
+  }
+  const revenueThisMonthByCurrency = groupByCurrency(paymentsThisMonth);
+  const totalRevenueByCurrency = groupByCurrency(allPayments);
+
+  function formatRevenue(byCurrency: Record<string, number>) {
+    const parts = Object.entries(byCurrency).map(([cur, amt]) => formatCurrency(amt, cur));
+    return parts.length ? parts.join(" · ") : formatCurrency(0, "GBP");
+  }
   const pendingCalendarEvents = await prisma.pendingCalendarEvent.count({ where: { status: "PENDING" } });
 
   const clientSummaries = clients.map((client) => {
@@ -37,6 +56,7 @@ async function getDashboard() {
       name: client.name,
       email: client.email,
       phone: client.phone,
+      currency: client.currency,
       activePackage: activePackage ? {
         id: activePackage.id,
         name: activePackage.name,
@@ -55,8 +75,8 @@ async function getDashboard() {
 
   return {
     clients: clientSummaries,
-    revenueThisMonth,
-    totalRevenue,
+    revenueThisMonth: formatRevenue(revenueThisMonthByCurrency),
+    totalRevenue: formatRevenue(totalRevenueByCurrency),
     activeClientCount: clients.filter((c) => c.packages.some((p) => p.status === "ACTIVE")).length,
     pendingCalendarEvents,
   };
@@ -87,8 +107,8 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: "Active Clients", value: activeClientCount, icon: Users, color: "text-blue-600" },
-          { label: "Revenue This Month", value: `$${revenueThisMonth.toLocaleString()}`, icon: DollarSign, color: "text-green-600" },
-          { label: "Total Revenue", value: `$${totalRevenue.toLocaleString()}`, icon: DollarSign, color: "text-emerald-600" },
+          { label: "Revenue This Month", value: revenueThisMonth, icon: DollarSign, color: "text-green-600" },
+          { label: "Total Revenue", value: totalRevenue, icon: DollarSign, color: "text-emerald-600" },
           { label: "Pending Sync", value: pendingCalendarEvents, icon: CalendarCheck, color: "text-amber-600" },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
@@ -134,7 +154,7 @@ export default async function DashboardPage() {
                       <SessionProgress used={client.activePackage.usedSessions} total={client.activePackage.totalSessions} remaining={client.activePackage.remaining} />
                     ) : <span className="text-gray-400 text-xs">—</span>}
                   </td>
-                  <td className="px-5 py-4 text-gray-700">${(client.activePackage?.totalPaid ?? 0).toLocaleString()}</td>
+                  <td className="px-5 py-4 text-gray-700">{formatCurrency(client.activePackage?.totalPaid ?? 0, client.currency)}</td>
                   <td className="px-5 py-4">
                     {client.activePackage ? <StatusBadge status={client.activePackage.status} /> : <span className="text-xs text-gray-400">—</span>}
                   </td>

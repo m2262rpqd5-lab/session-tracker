@@ -13,6 +13,7 @@ model Client {
   email      String?
   phone      String?
   notes      String?
+  currency   String    @default("GBP")
   isArchived Boolean   @default(false)
   archivedAt DateTime?
   createdAt  DateTime  @default(now())

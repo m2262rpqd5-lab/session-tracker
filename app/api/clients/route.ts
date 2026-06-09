@@ -18,12 +18,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, email, phone, notes } = body;
+  const { name, email, phone, notes, currency } = body;
   if (!name?.trim()) {
     return Response.json({ error: "Name is required" }, { status: 400 });
   }
   const client = await prisma.client.create({
-    data: { name: name.trim(), email, phone, notes },
+    data: { name: name.trim(), email, phone, notes, currency: currency ?? "GBP" },
   });
   return Response.json(client, { status: 201 });
 }

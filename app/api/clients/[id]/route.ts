@@ -30,7 +30,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const body = await req.json();
-  const { name, email, phone, notes, isArchived } = body;
+  const { name, email, phone, notes, isArchived, currency } = body;
   const client = await prisma.client.update({
     where: { id },
     data: {
@@ -38,6 +38,7 @@ export async function PATCH(
       ...(email !== undefined && { email }),
       ...(phone !== undefined && { phone }),
       ...(notes !== undefined && { notes }),
+      ...(currency !== undefined && { currency }),
       ...(isArchived !== undefined && {
         isArchived,
         archivedAt: isArchived ? new Date() : null,
