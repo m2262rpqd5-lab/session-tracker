@@ -8,6 +8,8 @@ import StatusBadge from "@/components/StatusBadge";
 import SessionProgress from "@/components/SessionProgress";
 import ClientActions from "./ClientActions";
 import SessionDeleteButton from "./SessionDeleteButton";
+import PaymentDeleteButton from "./PaymentDeleteButton";
+import AdjustmentDeleteButton from "./AdjustmentDeleteButton";
 
 export default async function ClientDetailPage({
   params,
@@ -117,6 +119,7 @@ export default async function ClientDetailPage({
                     <span className="text-gray-700">Payment</span>
                     {p.method && <span className="text-gray-400">· {p.method}</span>}
                     {p.notes && <span className="text-gray-400">· {p.notes}</span>}
+                    <PaymentDeleteButton paymentId={p.id} />
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-green-600 font-medium">+{formatCurrency(p.amount, client.currency)}</span>
@@ -144,6 +147,7 @@ export default async function ClientDetailPage({
                     <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />
                     <span className="text-gray-700">Adjustment</span>
                     <span className="text-gray-400">· {a.reason}</span>
+                    <AdjustmentDeleteButton adjustmentId={a.id} />
                   </div>
                   <div className="flex items-center gap-4">
                     <span className={a.delta >= 0 ? "text-green-600" : "text-red-500"}>
