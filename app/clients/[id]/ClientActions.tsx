@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/Modal";
 import { CURRENCIES, formatCurrency } from "@/lib/currency";
 
-type Template = { id: string; name: string; sessionCount: number; price: number };
+type Template = { id: string; name: string; sessionCount: number; price: number; currency: string };
 type Pkg = { id: string; name: string; status: string };
 type Client = { id: string; name: string; isArchived: boolean; currency: string };
 
@@ -67,12 +67,12 @@ export default function ClientActions({
 
       {/* Add Payment */}
       <Modal open={modal === "payment"} onClose={close} title="Record Payment">
-        <PaymentForm packageId={activePackage?.id ?? ""} onDone={refresh} />
+        <PaymentForm packageId={activePackage?.id ?? ""} currency={client.currency} onDone={refresh} />
       </Modal>
 
       {/* Assign Package */}
       <Modal open={modal === "package"} onClose={close} title="Assign Package">
-        <AssignPackageForm clientId={client.id} templates={templates} onDone={refresh} />
+        <AssignPackageForm clientId={client.id} templates={templates} currency={client.currency} onDone={refresh} />
       </Modal>
 
       {/* Adjustment */}
@@ -147,13 +147,14 @@ function LogSessionForm({ packageId, onDone }: { packageId: string; onDone: () =
   );
 }
 
-function PaymentForm({ packageId, onDone }: { packageId: string; onDone: () => void }) {
+function PaymentForm({ packageId, currency, onDone }: { packageId: string; currency: string; onDone: () => void }) {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("Cash");
   const [notes, setNotes] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const currencyLabel = currency === "GBP" ? "£ GBP" : "SAR";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -172,7 +173,7 @@ function PaymentForm({ packageId, onDone }: { packageId: string; onDone: () => v
     <form onSubmit={submit} className="space-y-4">
       {error && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</div>}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Amount ({currencyLabel})</label>
         <input type="number" min="1" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} required
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
       </div>
@@ -203,7 +204,7 @@ function PaymentForm({ packageId, onDone }: { packageId: string; onDone: () => v
   );
 }
 
-function AssignPackageForm({ clientId, templates, onDone }: { clientId: string; templates: Template[]; onDone: () => void }) {
+function AssignPackageForm({ clientId, templates, currency, onDone }: { clientId: string; templates: Template[]; currency: string; onDone: () => void }) {
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
   const [isCustom, setIsCustom] = useState(false);
   const [customName, setCustomName] = useState("");
@@ -249,7 +250,7 @@ function AssignPackageForm({ clientId, templates, onDone }: { clientId: string; 
           <select value={templateId} onChange={(e) => setTemplateId(e.target.value)}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300">
             {templates.map((t) => (
-              <option key={t.id} value={t.id}>{t.name} — {t.sessionCount} sessions @ ${t.price}</option>
+              <option key={t.id} value={t.id}>{t.name} — {t.sessionCount} sessions @ {t.currency === "GBP" ? `£${t.price}` : `SAR ${t.price}`}</option>
             ))}
           </select>
         </div>
