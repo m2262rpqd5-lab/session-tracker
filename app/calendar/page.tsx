@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { format, formatDistanceToNow } from "date-fns";
-import { CheckCircle, XCircle, Clock, Copy, Check, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Copy, Check, RefreshCw, Upload } from "lucide-react";
 
 type PendingEvent = {
   id: string;
@@ -91,6 +91,9 @@ export default function CalendarPage() {
   const [testTitle, setTestTitle] = useState("");
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://session-tracker-six.vercel.app";
   const syncUrl = `${origin}/api/calendar/shortcuts-sync?secret=my-session-tracker-secret&title=`;
@@ -129,6 +132,26 @@ export default function CalendarPage() {
     await fetch(`/api/calendar/pending/${id}/reject`, { method: "POST" });
     setProcessing((p) => ({ ...p, [id]: false }));
     load();
+  }
+
+  async function importFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/calendar/import", { method: "POST", body: fd });
+    const d = await res.json();
+    setImporting(false);
+    if (res.ok) {
+      setImportResult(`✓ Done! ${d.scanned} events imported, ${d.matched} matched to clients, ${d.skipped} duplicates/future skipped.`);
+      load();
+    } else {
+      setImportResult(`✗ ${d.error}`);
+    }
+    // reset so same file can be re-uploaded
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function sendTestEvent(e: React.FormEvent) {
@@ -173,6 +196,59 @@ export default function CalendarPage() {
         <button onClick={load} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">
           <RefreshCw size={13} /> Refresh
         </button>
+      </div>
+
+      {/* File Import */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <div className="font-medium text-gray-900">Import from Calendar File</div>
+          <div className="text-sm text-gray-500 mt-0.5">Upload a <strong>.ics</strong> file from Apple/Google Calendar, or a <strong>.csv</strong> from Google Calendar export</div>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
+            <div className="bg-gray-50 rounded-lg p-4 space-y-1.5 border border-gray-100">
+              <div className="font-medium text-gray-800">🍎 Apple Calendar</div>
+              <ol className="list-decimal pl-4 space-y-0.5 text-gray-500">
+                <li>Open Calendar on Mac</li>
+                <li>File → Export → Export…</li>
+                <li>Save the <code className="bg-gray-100 px-1 rounded">.ics</code> file</li>
+                <li>Upload it below</li>
+              </ol>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4 space-y-1.5 border border-gray-100">
+              <div className="font-medium text-gray-800">📅 Google Calendar</div>
+              <ol className="list-decimal pl-4 space-y-0.5 text-gray-500">
+                <li>Open Google Calendar on web</li>
+                <li>Settings → Import &amp; Export</li>
+                <li>Click <strong>Export</strong> — downloads a zip</li>
+                <li>Unzip, then upload the <code className="bg-gray-100 px-1 rounded">.ics</code> file</li>
+              </ol>
+            </div>
+          </div>
+
+          <div
+            className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="mx-auto text-gray-300 mb-3" size={28} />
+            <div className="text-sm font-medium text-gray-600">{importing ? "Importing…" : "Click to upload your .ics or .csv file"}</div>
+            <div className="text-xs text-gray-400 mt-1">Duplicate events are automatically skipped</div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".ics,.csv"
+              className="hidden"
+              onChange={importFile}
+              disabled={importing}
+            />
+          </div>
+
+          {importResult && (
+            <div className={`text-sm px-3 py-2 rounded-lg ${importResult.startsWith("✓") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+              {importResult}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Shortcuts Setup Guide */}
