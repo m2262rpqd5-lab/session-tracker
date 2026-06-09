@@ -16,6 +16,7 @@ type Template = {
 export default function PackagesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [gbpToSar, setGbpToSar] = useState(4.73);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ name: "", sessionCount: "", price: "", currency: "GBP", validityDays: "" });
   const [saving, setSaving] = useState(false);
@@ -26,7 +27,14 @@ export default function PackagesPage() {
     setTemplates(await res.json());
     setLoaded(true);
   }
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+    fetch("https://api.exchangerate-api.com/v4/latest/GBP")
+      .then((r) => r.json())
+      .then((d) => { if (d.rates?.SAR) setGbpToSar(d.rates.SAR); })
+      .catch(() => {});
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -102,7 +110,14 @@ export default function PackagesPage() {
               <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
                 <td className="px-5 py-4 font-medium text-gray-900">{t.name}</td>
                 <td className="px-5 py-4 text-gray-600">{t.sessionCount}</td>
-                <td className="px-5 py-4 text-gray-600">{formatCurrency(t.price, t.currency)}</td>
+                <td className="px-5 py-4 text-gray-600">
+                  <div>{formatCurrency(t.price, t.currency)}</div>
+                  {t.currency === "GBP" ? (
+                    <div className="text-xs text-gray-400">≈ {formatCurrency(Math.round(t.price * gbpToSar), "SAR")}</div>
+                  ) : (
+                    <div className="text-xs text-gray-400">≈ {formatCurrency(Math.round(t.price / gbpToSar), "GBP")}</div>
+                  )}
+                </td>
                 <td className="px-5 py-4 text-gray-600">{t.validityDays ? `${t.validityDays} days` : "—"}</td>
                 <td className="px-5 py-4">
                   <button onClick={() => toggle(t)}
