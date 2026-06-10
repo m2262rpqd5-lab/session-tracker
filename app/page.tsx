@@ -31,18 +31,6 @@ async function getDashboard() {
     include: { clientPackage: { include: { client: { select: { currency: true } } } } },
   });
 
-  // Group revenue by currency
-  function groupByCurrency(payments: typeof allPayments) {
-    const map: Record<string, number> = {};
-    for (const p of payments) {
-      const cur = p.clientPackage.client.currency ?? "GBP";
-      map[cur] = (map[cur] ?? 0) + p.amount;
-    }
-    return map;
-  }
-  const revenueThisMonthByCurrency = groupByCurrency(paymentsThisMonth);
-  const totalRevenueByCurrency = groupByCurrency(allPayments);
-
   const pendingCalendarEvents = await prisma.pendingCalendarEvent.count({ where: { status: "PENDING" } });
 
   // Live GBP → SAR exchange rate
@@ -54,6 +42,18 @@ async function getDashboard() {
       gbpToSar = fxData.rates?.SAR ?? gbpToSar;
     }
   } catch {}
+
+  // Combined GBP-equivalent totals: GBP payments added directly, SAR payments converted
+  function toGbpTotal(payments: typeof allPayments) {
+    let total = 0;
+    for (const p of payments) {
+      const cur = p.clientPackage.client.currency ?? "GBP";
+      total += cur === "SAR" ? p.amount / gbpToSar : p.amount;
+    }
+    return total;
+  }
+  const revenueThisMonthGbp = toGbpTotal(paymentsThisMonth);
+  const totalRevenueGbp = toGbpTotal(allPayments);
 
   const clientSummaries = clients.map((client) => {
     const activePackage = client.packages.find((p) => p.status === "ACTIVE") ?? client.packages[0] ?? null;
@@ -83,8 +83,8 @@ async function getDashboard() {
 
   return {
     clients: clientSummaries,
-    revenueThisMonthByCurrency,
-    totalRevenueByCurrency,
+    revenueThisMonthGbp,
+    totalRevenueGbp,
     gbpToSar,
     activeClientCount: clients.filter((c) => c.packages.some((p) => p.status === "ACTIVE")).length,
     pendingCalendarEvents,
@@ -94,7 +94,7 @@ async function getDashboard() {
 export default async function DashboardPage() {
   const data = await getDashboard();
 
-  const { clients, revenueThisMonthByCurrency, totalRevenueByCurrency, gbpToSar, activeClientCount, pendingCalendarEvents } = data;
+  const { clients, revenueThisMonthGbp, totalRevenueGbp, gbpToSar, activeClientCount, pendingCalendarEvents } = data;
 
   return (
     <div className="space-y-6">
@@ -122,7 +122,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Revenue cards — GBP with live SAR conversion */}
-        <RevenueCards thisMonth={revenueThisMonthByCurrency} total={totalRevenueByCurrency} gbpToSar={gbpToSar} />
+        <RevenueCards thisMonth={revenueThisMonthGbp} total={totalRevenueGbp} gbpToSar={gbpToSar} />
 
         {/* Pending Sync */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
