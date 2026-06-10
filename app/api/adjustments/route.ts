@@ -9,13 +9,15 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "clientPackageId, delta, and reason required" }, { status: 400 });
   }
 
-  const adjustment = await prisma.adjustment.create({
-    data: {
-      clientPackageId,
-      delta: Number(delta),
-      reason,
-    },
-  });
+  const [adjustment] = await prisma.$transaction([
+    prisma.adjustment.create({
+      data: { clientPackageId, delta: Number(delta), reason },
+    }),
+    prisma.clientPackage.update({
+      where: { id: clientPackageId },
+      data: { usedSessions: { increment: Number(delta) } },
+    }),
+  ]);
 
   return Response.json(adjustment, { status: 201 });
 }
