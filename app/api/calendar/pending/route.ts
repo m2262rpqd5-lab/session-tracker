@@ -8,3 +8,8 @@ export async function GET() {
   });
   return Response.json(events);
 }
+
+export async function DELETE() {
+  await prisma.pendingCalendarEvent.deleteMany({ where: { status: "PENDING" } });
+  return new Response(null, { status: 204 });
+}

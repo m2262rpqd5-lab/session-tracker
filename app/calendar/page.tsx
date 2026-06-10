@@ -175,6 +175,16 @@ export default function CalendarPage() {
     }
   }
 
+  const [deletingAll, setDeletingAll] = useState(false);
+
+  async function deleteAllPending() {
+    if (!confirm(`Delete all ${pending.length} pending events? This cannot be undone.`)) return;
+    setDeletingAll(true);
+    await fetch("/api/calendar/pending", { method: "DELETE" });
+    setDeletingAll(false);
+    load();
+  }
+
   const pending = events.filter((e) => e.status === "PENDING");
   const lastSync = syncLogs[0];
 
@@ -341,6 +351,16 @@ export default function CalendarPage() {
           <span className="text-sm font-medium text-gray-700">
             {loading ? "Loading…" : pending.length === 0 ? "Pending Events" : `${pending.length} event${pending.length !== 1 ? "s" : ""} awaiting review`}
           </span>
+          {pending.length > 0 && (
+            <button
+              onClick={deleteAllPending}
+              disabled={deletingAll}
+              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 border border-red-200 hover:border-red-400 px-2 py-1 rounded-lg transition-colors disabled:opacity-40"
+            >
+              <XCircle size={12} />
+              {deletingAll ? "Deleting…" : "Delete all"}
+            </button>
+          )}
         </div>
         {loading ? (
           <div className="py-10 text-center text-gray-400 text-sm">Loading…</div>
