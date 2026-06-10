@@ -14,6 +14,7 @@ model Client {
   phone      String?
   notes      String?
   currency   String    @default("GBP")
+  clientType String    @default("PRIVATE")
   isArchived Boolean   @default(false)
   archivedAt DateTime?
   createdAt  DateTime  @default(now())

@@ -64,6 +64,7 @@ async function getDashboard() {
       email: client.email,
       phone: client.phone,
       currency: client.currency,
+      clientType: client.clientType,
       activePackage: activePackage ? {
         id: activePackage.id,
         name: activePackage.name,
@@ -155,7 +156,12 @@ export default async function DashboardPage() {
               {clients.map((client: any) => (
                 <tr key={client.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-4">
-                    <Link href={`/clients/${client.id}`} className="font-medium text-gray-900 hover:text-blue-600">{client.name}</Link>
+                    <div className="flex items-center gap-1.5">
+                      <Link href={`/clients/${client.id}`} className="font-medium text-gray-900 hover:text-blue-600">{client.name}</Link>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${client.clientType === "LYO" ? "bg-purple-100 text-purple-700" : "bg-blue-50 text-blue-600"}`}>
+                        {client.clientType === "LYO" ? "LYO" : "Private"}
+                      </span>
+                    </div>
                     {client.email && <div className="text-xs text-gray-400">{client.email}</div>}
                   </td>
                   <td className="px-5 py-4 text-gray-600">
