@@ -7,3 +7,8 @@ export async function GET() {
   });
   return Response.json(logs);
 }
+
+export async function DELETE() {
+  await prisma.calendarSyncLog.deleteMany({});
+  return new Response(null, { status: 204 });
+}

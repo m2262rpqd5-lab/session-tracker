@@ -176,6 +176,15 @@ export default function CalendarPage() {
   }
 
   const [deletingAll, setDeletingAll] = useState(false);
+  const [deletingHistory, setDeletingHistory] = useState(false);
+
+  async function deleteHistory() {
+    if (!confirm("Delete all sync history? This cannot be undone.")) return;
+    setDeletingHistory(true);
+    await fetch("/api/calendar/sync-history", { method: "DELETE" });
+    setDeletingHistory(false);
+    load();
+  }
 
   async function deleteAllPending() {
     if (!confirm(`Delete all ${pending.length} pending events? This cannot be undone.`)) return;
@@ -421,8 +430,16 @@ export default function CalendarPage() {
       {/* Sync History */}
       {syncLogs.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+          <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">Sync History</span>
+            <button
+              onClick={deleteHistory}
+              disabled={deletingHistory}
+              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 border border-red-200 hover:border-red-400 px-2 py-1 rounded-lg transition-colors disabled:opacity-40"
+            >
+              <XCircle size={12} />
+              {deletingHistory ? "Deleting…" : "Delete all"}
+            </button>
           </div>
           <table className="w-full text-xs">
             <thead>
