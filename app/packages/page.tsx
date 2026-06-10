@@ -18,9 +18,13 @@ export default function PackagesPage() {
   const [loaded, setLoaded] = useState(false);
   const [gbpToSar, setGbpToSar] = useState(4.73);
   const [modal, setModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [form, setForm] = useState({ name: "", sessionCount: "", price: "", currency: "GBP", validityDays: "" });
+  const [editForm, setEditForm] = useState({ name: "", sessionCount: "", price: "", currency: "GBP", validityDays: "" });
   const [saving, setSaving] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
   const [error, setError] = useState("");
+  const [editError, setEditError] = useState("");
 
   async function load() {
     const res = await fetch("/api/package-templates");
@@ -55,6 +59,40 @@ export default function PackagesPage() {
     if (!res.ok) { const d = await res.json(); setError(d.error); return; }
     setModal(false);
     setForm({ name: "", sessionCount: "", price: "", currency: "GBP", validityDays: "" });
+    load();
+  }
+
+  function openEdit(t: Template) {
+    setEditingTemplate(t);
+    setEditForm({
+      name: t.name,
+      sessionCount: String(t.sessionCount),
+      price: String(t.price),
+      currency: t.currency,
+      validityDays: t.validityDays ? String(t.validityDays) : "",
+    });
+    setEditError("");
+  }
+
+  async function submitEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingTemplate) return;
+    setEditSaving(true);
+    setEditError("");
+    const res = await fetch(`/api/package-templates/${editingTemplate.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: editForm.name,
+        sessionCount: Number(editForm.sessionCount),
+        price: Number(editForm.price),
+        currency: editForm.currency,
+        validityDays: editForm.validityDays ? Number(editForm.validityDays) : null,
+      }),
+    });
+    setEditSaving(false);
+    if (!res.ok) { const d = await res.json(); setEditError(d.error); return; }
+    setEditingTemplate(null);
     load();
   }
 
@@ -125,7 +163,8 @@ export default function PackagesPage() {
                     {t.isActive ? "Active" : "Inactive"}
                   </button>
                 </td>
-                <td className="px-5 py-4 text-right">
+                <td className="px-5 py-4 text-right flex items-center justify-end gap-3">
+                  <button onClick={() => openEdit(t)} className="text-xs text-blue-400 hover:text-blue-600">Edit</button>
                   <button onClick={() => deleteTemplate(t)} className="text-xs text-red-400 hover:text-red-600">Delete</button>
                 </td>
               </tr>
@@ -133,6 +172,62 @@ export default function PackagesPage() {
           </tbody>
         </table>
       </div>
+
+      <Modal open={!!editingTemplate} onClose={() => setEditingTemplate(null)} title="Edit Package Template">
+        <form onSubmit={submitEdit} className="space-y-4">
+          {editError && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{editError}</div>}
+          {[
+            { key: "name", label: "Name", type: "text", required: true },
+            { key: "sessionCount", label: "Number of Sessions", type: "number", required: true },
+          ].map(({ key, label, type, required }) => (
+            <div key={key}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+              <input
+                type={type}
+                required={required}
+                value={(editForm as any)[key]}
+                onChange={(e) => setEditForm((f) => ({ ...f, [key]: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+          ))}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+              <input
+                type="number"
+                required
+                value={editForm.price}
+                onChange={(e) => setEditForm((f) => ({ ...f, price: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+              <select
+                value={editForm.currency}
+                onChange={(e) => setEditForm((f) => ({ ...f, currency: e.target.value }))}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              >
+                {CURRENCIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Valid for (days, leave blank = no expiry)</label>
+            <input
+              type="number"
+              value={editForm.validityDays}
+              onChange={(e) => setEditForm((f) => ({ ...f, validityDays: e.target.value }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+            />
+          </div>
+          <button type="submit" disabled={editSaving}
+            className="w-full bg-gray-900 text-white text-sm py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50">
+            {editSaving ? "Saving…" : "Save Changes"}
+          </button>
+        </form>
+      </Modal>
 
       <Modal open={modal} onClose={() => setModal(false)} title="New Package Template">
         <form onSubmit={submit} className="space-y-4">
