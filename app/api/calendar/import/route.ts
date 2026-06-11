@@ -111,6 +111,8 @@ function parseCsv(text: string): RawEvent[] {
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
+  const fromStr = formData.get("from") as string | null;
+  const toStr = formData.get("to") as string | null;
 
   if (!file) {
     return Response.json({ error: "No file uploaded" }, { status: 400 });
@@ -132,6 +134,11 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "No events found in file" }, { status: 400 });
   }
 
+  // Date range filter
+  const fromDate = fromStr ? new Date(fromStr) : null;
+  const toDate = toStr ? new Date(toStr) : null;
+  if (toDate) toDate.setHours(23, 59, 59, 999); // include full end day
+
   const clients = await prisma.client.findMany({ select: { id: true, name: true } });
   const now = new Date();
   const counts = { scanned: 0, matched: 0, unmatched: 0, skipped: 0 };
@@ -139,6 +146,8 @@ export async function POST(req: NextRequest) {
   for (const { title, startDate } of rawEvents) {
     if (!title.trim()) { counts.skipped++; continue; }
     if (startDate > now) { counts.skipped++; continue; }
+    if (fromDate && startDate < fromDate) { counts.skipped++; continue; }
+    if (toDate && startDate > toDate) { counts.skipped++; continue; }
 
     counts.scanned++;
 

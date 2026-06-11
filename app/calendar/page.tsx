@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { format, formatDistanceToNow } from "date-fns";
-import { CheckCircle, XCircle, Clock, Copy, Check, RefreshCw, Upload } from "lucide-react";
+import { format, formatDistanceToNow, startOfWeek, endOfWeek, subWeeks } from "date-fns";
+import { CheckCircle, XCircle, Clock, RefreshCw, Upload } from "lucide-react";
 
 type PendingEvent = {
   id: string;
@@ -21,65 +21,11 @@ type SyncLog = {
   eventsSkipped: number;
 };
 
-function copyToClipboard(text: string) {
-  // Preferred: async Clipboard API
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
-    return;
-  }
-  fallbackCopy(text);
-}
+type RangeMode = "today" | "this_week" | "last_week" | "custom";
 
-function fallbackCopy(text: string) {
-  const el = document.createElement("textarea");
-  el.value = text;
-  el.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0";
-  document.body.appendChild(el);
-  el.focus();
-  el.select();
-  document.execCommand("copy");
-  document.body.removeChild(el);
-}
-
-function CopyField({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  const [copied, setCopied] = useState(false);
-  function copy() {
-    copyToClipboard(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-  return (
-    <div className="space-y-1.5">
-      {label && <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</div>}
-      <div className="flex items-center gap-2">
-        <code className={`flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm break-all ${mono ? "font-mono" : ""}`}>
-          {value}
-        </code>
-        <button
-          onClick={copy}
-          className="shrink-0 p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors"
-          title="Copy"
-        >
-          {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
-  return (
-    <div className="flex gap-4">
-      <div className="shrink-0 w-7 h-7 rounded-full bg-gray-900 text-white text-xs font-bold flex items-center justify-center mt-0.5">
-        {n}
-      </div>
-      <div className="flex-1 pb-5">
-        <div className="font-medium text-gray-900 text-sm mb-2">{title}</div>
-        {children}
-      </div>
-    </div>
-  );
-}
+function today() { return new Date().toISOString().slice(0, 10); }
+function weekStart(d: Date) { return startOfWeek(d, { weekStartsOn: 1 }).toISOString().slice(0, 10); }
+function weekEnd(d: Date) { return endOfWeek(d, { weekStartsOn: 1 }).toISOString().slice(0, 10); }
 
 export default function CalendarPage() {
   const [events, setEvents] = useState<PendingEvent[]>([]);
@@ -88,15 +34,34 @@ export default function CalendarPage() {
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<Record<string, boolean>>({});
-  const [testTitle, setTestTitle] = useState("");
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [deletingAll, setDeletingAll] = useState(false);
+  const [deletingHistory, setDeletingHistory] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://session-tracker-six.vercel.app";
-  const syncUrl = `${origin}/api/calendar/shortcuts-sync?secret=my-session-tracker-secret&title=`;
+  // Date range state
+  const [rangeMode, setRangeMode] = useState<RangeMode>("this_week");
+  const [customFrom, setCustomFrom] = useState(today());
+  const [customTo, setCustomTo] = useState(today());
+
+  const now = new Date();
+  const rangeOptions: { value: RangeMode; label: string }[] = [
+    { value: "today", label: "Today" },
+    { value: "this_week", label: "This week" },
+    { value: "last_week", label: "Last week" },
+    { value: "custom", label: "Custom range" },
+  ];
+
+  function getRange(): { from: string; to: string } {
+    if (rangeMode === "today") return { from: today(), to: today() };
+    if (rangeMode === "this_week") return { from: weekStart(now), to: weekEnd(now) };
+    if (rangeMode === "last_week") {
+      const lw = subWeeks(now, 1);
+      return { from: weekStart(lw), to: weekEnd(lw) };
+    }
+    return { from: customFrom, to: customTo };
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -139,51 +104,21 @@ export default function CalendarPage() {
     if (!file) return;
     setImporting(true);
     setImportResult(null);
+    const { from, to } = getRange();
     const fd = new FormData();
     fd.append("file", file);
+    fd.append("from", from);
+    fd.append("to", to);
     const res = await fetch("/api/calendar/import", { method: "POST", body: fd });
     const d = await res.json();
     setImporting(false);
     if (res.ok) {
-      setImportResult(`✓ Done! ${d.scanned} events imported, ${d.matched} matched to clients, ${d.skipped} duplicates/future skipped.`);
+      setImportResult({ ok: true, msg: `Done! ${d.scanned} events scanned, ${d.matched} matched to clients, ${d.skipped} outside range / duplicates skipped.` });
       load();
     } else {
-      setImportResult(`✗ ${d.error}`);
+      setImportResult({ ok: false, msg: d.error ?? "Import failed" });
     }
-    // reset so same file can be re-uploaded
     if (fileInputRef.current) fileInputRef.current.value = "";
-  }
-
-  async function sendTestEvent(e: React.FormEvent) {
-    e.preventDefault();
-    if (!testTitle.trim()) return;
-    setTesting(true);
-    setTestResult(null);
-    const res = await fetch("/api/calendar/shortcuts-sync", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-sync-secret": "dev-secret" },
-      body: JSON.stringify({ title: testTitle, startDate: new Date().toISOString() }),
-    });
-    const d = await res.json();
-    setTesting(false);
-    if (res.ok) {
-      setTestResult(`✓ Sent! Matched: ${d.matched}, Unmatched: ${d.unmatched}`);
-      setTestTitle("");
-      load();
-    } else {
-      setTestResult(`✗ ${d.error}`);
-    }
-  }
-
-  const [deletingAll, setDeletingAll] = useState(false);
-  const [deletingHistory, setDeletingHistory] = useState(false);
-
-  async function deleteHistory() {
-    if (!confirm("Delete all sync history? This cannot be undone.")) return;
-    setDeletingHistory(true);
-    await fetch("/api/calendar/sync-history", { method: "DELETE" });
-    setDeletingHistory(false);
-    load();
   }
 
   async function deleteAllPending() {
@@ -191,6 +126,14 @@ export default function CalendarPage() {
     setDeletingAll(true);
     await fetch("/api/calendar/pending", { method: "DELETE" });
     setDeletingAll(false);
+    load();
+  }
+
+  async function deleteHistory() {
+    if (!confirm("Delete all sync history? This cannot be undone.")) return;
+    setDeletingHistory(true);
+    await fetch("/api/calendar/sync-history", { method: "DELETE" });
+    setDeletingHistory(false);
     load();
   }
 
@@ -202,14 +145,13 @@ export default function CalendarPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Calendar Sync</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Calendar Import</h1>
           {lastSync ? (
             <div className="text-xs text-gray-400 mt-0.5">
-              Last sync {formatDistanceToNow(new Date(lastSync.syncedAt), { addSuffix: true })} ·{" "}
-              {lastSync.eventsScanned} scanned · {lastSync.eventsMatched + lastSync.eventsPending} queued
+              Last import {formatDistanceToNow(new Date(lastSync.syncedAt), { addSuffix: true })}
             </div>
           ) : (
-            <div className="text-xs text-gray-400 mt-0.5">No syncs yet — follow the guide below</div>
+            <div className="text-xs text-gray-400 mt-0.5">No imports yet</div>
           )}
         </div>
         <button onClick={load} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">
@@ -217,41 +159,101 @@ export default function CalendarPage() {
         </button>
       </div>
 
-      {/* File Import */}
+      {/* Import card */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
           <div className="font-medium text-gray-900">Import from Calendar File</div>
-          <div className="text-sm text-gray-500 mt-0.5">Upload a <strong>.ics</strong> file from Apple/Google Calendar, or a <strong>.csv</strong> from Google Calendar export</div>
+          <div className="text-sm text-gray-500 mt-0.5">
+            Upload a <strong>.ics</strong> or <strong>.csv</strong> export from Apple or Google Calendar — only sessions within the selected date range will be imported.
+          </div>
         </div>
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
+
+        <div className="p-5 space-y-5">
+          {/* How to export */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-600">
             <div className="bg-gray-50 rounded-lg p-4 space-y-1.5 border border-gray-100">
               <div className="font-medium text-gray-800">🍎 Apple Calendar</div>
-              <ol className="list-decimal pl-4 space-y-0.5 text-gray-500">
+              <ol className="list-decimal pl-4 space-y-0.5 text-gray-500 text-xs">
                 <li>Open Calendar on Mac</li>
                 <li>File → Export → Export…</li>
-                <li>Save the <code className="bg-gray-100 px-1 rounded">.ics</code> file</li>
-                <li>Upload it below</li>
+                <li>Save the <code className="bg-gray-100 px-1 rounded">.ics</code> file &amp; upload below</li>
               </ol>
             </div>
             <div className="bg-gray-50 rounded-lg p-4 space-y-1.5 border border-gray-100">
               <div className="font-medium text-gray-800">📅 Google Calendar</div>
-              <ol className="list-decimal pl-4 space-y-0.5 text-gray-500">
+              <ol className="list-decimal pl-4 space-y-0.5 text-gray-500 text-xs">
                 <li>Open Google Calendar on web</li>
-                <li>Settings → Import &amp; Export</li>
-                <li>Click <strong>Export</strong> — downloads a zip</li>
-                <li>Unzip, then upload the <code className="bg-gray-100 px-1 rounded">.ics</code> file</li>
+                <li>Settings → Import &amp; Export → Export</li>
+                <li>Unzip, upload the <code className="bg-gray-100 px-1 rounded">.ics</code> file below</li>
               </ol>
             </div>
           </div>
 
+          {/* Date range picker */}
+          <div>
+            <div className="text-sm font-medium text-gray-700 mb-2">Date range to import</div>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {rangeOptions.map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setRangeMode(o.value)}
+                  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                    rangeMode === o.value
+                      ? "bg-gray-900 text-white border-gray-900"
+                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+
+            {rangeMode === "custom" && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">From</label>
+                  <input
+                    type="date"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
+                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">To</label>
+                  <input
+                    type="date"
+                    value={customTo}
+                    min={customFrom}
+                    onChange={(e) => setCustomTo(e.target.value)}
+                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  />
+                </div>
+              </div>
+            )}
+
+            {rangeMode !== "custom" && (
+              <div className="text-xs text-gray-400">
+                {(() => {
+                  const { from, to } = getRange();
+                  return from === to
+                    ? `Importing sessions on ${format(new Date(from), "MMM d, yyyy")}`
+                    : `Importing sessions from ${format(new Date(from), "MMM d")} to ${format(new Date(to), "MMM d, yyyy")}`;
+                })()}
+              </div>
+            )}
+          </div>
+
+          {/* Upload area */}
           <div
             className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => !importing && fileInputRef.current?.click()}
           >
             <Upload className="mx-auto text-gray-300 mb-3" size={28} />
-            <div className="text-sm font-medium text-gray-600">{importing ? "Importing…" : "Click to upload your .ics or .csv file"}</div>
-            <div className="text-xs text-gray-400 mt-1">Duplicate events are automatically skipped</div>
+            <div className="text-sm font-medium text-gray-600">
+              {importing ? "Importing…" : "Click to upload your .ics or .csv file"}
+            </div>
+            <div className="text-xs text-gray-400 mt-1">Duplicates are automatically skipped</div>
             <input
               ref={fileInputRef}
               type="file"
@@ -263,94 +265,10 @@ export default function CalendarPage() {
           </div>
 
           {importResult && (
-            <div className={`text-sm px-3 py-2 rounded-lg ${importResult.startsWith("✓") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
-              {importResult}
+            <div className={`text-sm px-3 py-2 rounded-lg ${importResult.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+              {importResult.ok ? "✓ " : "✗ "}{importResult.msg}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Shortcuts Setup Guide */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <div className="font-medium text-gray-900">Apple Shortcuts Setup</div>
-          <div className="text-sm text-gray-500 mt-0.5">5-minute setup · runs automatically · no Terminal needed</div>
-        </div>
-        <div className="p-6 space-y-1">
-
-          <Step n={1} title='Open Shortcuts → New Shortcut → add "Find Calendar Events"'>
-            <p className="text-sm text-gray-500">
-              Set the filter: <strong className="text-gray-700">Start Date is in the last 1 day</strong>.
-              Add a calendar filter to select only your client session calendar.
-            </p>
-          </Step>
-
-          <Step n={2} title='Add "Repeat with Each Item in Calendar Events"'>
-            <p className="text-sm text-gray-500">Everything inside the loop runs once per event.</p>
-          </Step>
-
-          <Step n={3} title='Inside the loop, add "Get Contents of URL" — build the URL with two variables'>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Base URL — paste this first</div>
-                <CopyField label="" value={syncUrl} mono />
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 space-y-1">
-                  <div className="font-medium">After pasting the URL, add two variables:</div>
-                  <ol className="list-decimal pl-4 space-y-1 text-amber-700">
-                    <li>Click after <code className="bg-amber-100 px-1 rounded text-xs">title=</code>, tap the variable icon (✦), choose <strong>"Repeat Item's Title"</strong></li>
-                    <li>Then type <code className="bg-amber-100 px-1 rounded text-xs">&date=</code> at the end, tap the variable icon again, choose <strong>"Repeat Item's Start Date"</strong></li>
-                  </ol>
-                  <div className="text-amber-600 text-xs mt-1">The date variable is required — without it every session is logged as today.</div>
-                </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm font-mono text-gray-600 break-all">
-                  <span className="text-gray-400">...&title=</span><span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Repeat Item's Title</span>
-                  <span className="text-gray-400">&date=</span><span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Repeat Item's Start Date</span>
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Method</div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono">GET</div>
-              </div>
-            </div>
-          </Step>
-
-          <Step n={4} title='Add "End Repeat", name the Shortcut "Sync Sessions", run it once'>
-            <p className="text-sm text-gray-500">Use the test area below first to confirm everything works before running the full Shortcut.</p>
-          </Step>
-
-          <Step n={5} title="Automate: Shortcuts → Automation → New Automation → Time of Day">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm space-y-1">
-              <div className="flex gap-2"><span className="text-gray-400 w-20">Trigger</span><span className="text-gray-700 font-medium">Time of Day — 8 PM, Daily</span></div>
-              <div className="flex gap-2"><span className="text-gray-400 w-20">Action</span><span className="text-gray-700 font-medium">Run Shortcut → "Sync Sessions"</span></div>
-              <div className="flex gap-2"><span className="text-gray-400 w-20">Setting</span><span className="text-gray-700 font-medium">Turn off "Ask Before Running"</span></div>
-            </div>
-          </Step>
-
-          {/* Test area */}
-          <div className="border-t border-gray-100 pt-5 space-y-3">
-            <div className="text-sm font-medium text-gray-700">Test it now</div>
-            <form onSubmit={sendTestEvent} className="flex gap-2">
-              <input
-                type="text"
-                value={testTitle}
-                onChange={(e) => setTestTitle(e.target.value)}
-                placeholder={clients[0] ? `e.g. "Session - ${clients[0].name}"` : "e.g. Session - Jane Smith"}
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
-              />
-              <button
-                type="submit"
-                disabled={testing || !testTitle.trim()}
-                className="shrink-0 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-40"
-              >
-                {testing ? "Sending…" : "Send test event"}
-              </button>
-            </form>
-            {testResult && (
-              <div className={`text-sm px-3 py-2 rounded-lg ${testResult.startsWith("✓") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
-                {testResult}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -377,7 +295,6 @@ export default function CalendarPage() {
           <div className="py-10 text-center space-y-1">
             <CheckCircle className="mx-auto text-green-400 mb-2" size={28} />
             <p className="text-gray-500 text-sm">All caught up — no pending events.</p>
-            <p className="text-gray-400 text-xs">Events from your Shortcut appear here after each sync.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -431,7 +348,7 @@ export default function CalendarPage() {
       {syncLogs.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Sync History</span>
+            <span className="text-sm font-medium text-gray-700">Import History</span>
             <button
               onClick={deleteHistory}
               disabled={deletingHistory}
@@ -446,7 +363,7 @@ export default function CalendarPage() {
               <tr className="border-b border-gray-50">
                 <th className="text-left px-5 py-2 font-medium text-gray-400">Time</th>
                 <th className="text-left px-5 py-2 font-medium text-gray-400">Scanned</th>
-                <th className="text-left px-5 py-2 font-medium text-gray-400">Queued</th>
+                <th className="text-left px-5 py-2 font-medium text-gray-400">Matched</th>
                 <th className="text-left px-5 py-2 font-medium text-gray-400">Skipped</th>
               </tr>
             </thead>
