@@ -113,7 +113,11 @@ export default function CalendarPage() {
     const d = await res.json();
     setImporting(false);
     if (res.ok) {
-      setImportResult({ ok: true, msg: `Done! ${d.scanned} events scanned, ${d.matched} matched to clients, ${d.skipped} outside range / duplicates skipped.` });
+      const parts = [];
+      if (d.autoLogged) parts.push(`${d.autoLogged} session${d.autoLogged !== 1 ? "s" : ""} logged automatically`);
+      if (d.queued) parts.push(`${d.queued} queued for review below`);
+      if (!d.autoLogged && !d.queued) parts.push("no new sessions found in this date range");
+      setImportResult({ ok: true, msg: `Done! ${parts.join(" · ")}` });
       load();
     } else {
       setImportResult({ ok: false, msg: d.error ?? "Import failed" });

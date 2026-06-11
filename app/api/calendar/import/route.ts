@@ -139,9 +139,12 @@ export async function POST(req: NextRequest) {
   const toDate = toStr ? new Date(toStr) : null;
   if (toDate) toDate.setHours(23, 59, 59, 999); // include full end day
 
-  const clients = await prisma.client.findMany({ select: { id: true, name: true } });
+  const clients = await prisma.client.findMany({
+    select: { id: true, name: true },
+    where: { isArchived: false },
+  });
   const now = new Date();
-  const counts = { scanned: 0, matched: 0, unmatched: 0, skipped: 0 };
+  const counts = { scanned: 0, autoLogged: 0, queued: 0, skipped: 0 };
 
   for (const { title, startDate } of rawEvents) {
     if (!title.trim()) { counts.skipped++; continue; }
@@ -162,6 +165,36 @@ export async function POST(req: NextRequest) {
 
     const match = matchEventToClient(title, clients);
 
+    // High confidence — auto-log directly to the client's active package
+    if (match && match.confidence >= 0.85) {
+      const activePkg = await prisma.clientPackage.findFirst({
+        where: { clientId: match.client.id, status: "ACTIVE" },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (activePkg) {
+        await prisma.$transaction([
+          prisma.session.create({
+            data: {
+              clientPackageId: activePkg.id,
+              sessionDate: startDate,
+              source: "CALENDAR_SYNC",
+              calendarEventId,
+              notes: null,
+            },
+          }),
+          prisma.clientPackage.update({
+            where: { id: activePkg.id },
+            data: { usedSessions: { increment: 1 } },
+          }),
+        ]);
+        counts.autoLogged++;
+        continue;
+      }
+      // No active package — fall through to pending queue
+    }
+
+    // Low/no confidence — queue for manual review
     await prisma.pendingCalendarEvent.create({
       data: {
         calendarEventId,
@@ -172,16 +205,14 @@ export async function POST(req: NextRequest) {
         status: "PENDING",
       },
     });
-
-    if (match) counts.matched++;
-    else counts.unmatched++;
+    counts.queued++;
   }
 
   await prisma.calendarSyncLog.create({
     data: {
       eventsScanned: counts.scanned,
-      eventsMatched: counts.matched,
-      eventsPending: counts.unmatched,
+      eventsMatched: counts.autoLogged,
+      eventsPending: counts.queued,
       eventsSkipped: counts.skipped,
     },
   });
