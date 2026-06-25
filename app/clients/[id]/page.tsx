@@ -10,6 +10,7 @@ import ClientActions from "./ClientActions";
 import SessionDeleteButton from "./SessionDeleteButton";
 import PaymentDeleteButton from "./PaymentDeleteButton";
 import AdjustmentDeleteButton from "./AdjustmentDeleteButton";
+import PackageDeleteButton from "./PackageDeleteButton";
 
 export default async function ClientDetailPage({
   params,
@@ -109,7 +110,10 @@ export default async function ClientDetailPage({
         <div key={pkg.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">{pkg.name}</span>
-            <StatusBadge status={pkg.status} />
+            <div className="flex items-center gap-3">
+              <StatusBadge status={pkg.status} />
+              <PackageDeleteButton packageId={pkg.id} />
+            </div>
           </div>
 
           {pkg.sessions.length === 0 && pkg.payments.length === 0 ? (
