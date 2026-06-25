@@ -29,26 +29,19 @@ export async function POST(req: NextRequest) {
     totalSessions = Number(customSessions);
   }
 
-  // Find the most recent non-cancelled package to carry over any session deficit
-  const previousPkg = await prisma.clientPackage.findFirst({
-    where: { clientId, status: { not: "CANCELLED" } },
+  // If there's already an active package, add sessions to it instead of creating a new one
+  const activePkg = await prisma.clientPackage.findFirst({
+    where: { clientId, status: "ACTIVE" },
     orderBy: { createdAt: "desc" },
-    include: { adjustments: true },
   });
 
-  // Calculate how many sessions were used beyond what the previous package covered
-  let carryOver = 0;
-  if (previousPkg) {
-    const adjustmentTotal = previousPkg.adjustments.reduce((sum, a) => sum + a.delta, 0);
-    const remaining = previousPkg.totalSessions - previousPkg.usedSessions + adjustmentTotal;
-    if (remaining < 0) {
-      carryOver = Math.abs(remaining);
-    }
-    // Close out the previous package
-    await prisma.clientPackage.update({
-      where: { id: previousPkg.id },
-      data: { status: "EXHAUSTED" },
+  if (activePkg) {
+    const updated = await prisma.clientPackage.update({
+      where: { id: activePkg.id },
+      data: { totalSessions: { increment: totalSessions } },
+      include: { client: true, template: true },
     });
+    return Response.json(updated, { status: 200 });
   }
 
   const pkg = await prisma.clientPackage.create({
@@ -57,7 +50,6 @@ export async function POST(req: NextRequest) {
       templateId: templateId || null,
       name,
       totalSessions,
-      usedSessions: carryOver,
       startDate: start,
       expiryDate,
     },
