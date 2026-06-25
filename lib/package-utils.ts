@@ -16,9 +16,8 @@ export function computeTotalPaid(pkg: PackageWithRelations): number {
 
 export function resolvePackageStatus(
   pkg: PackageWithRelations
-): "ACTIVE" | "EXHAUSTED" | "EXPIRED" | "CANCELLED" {
+): "ACTIVE" | "EXPIRED" | "CANCELLED" {
   if (pkg.status === "CANCELLED") return "CANCELLED";
   if (pkg.expiryDate && new Date(pkg.expiryDate) < new Date()) return "EXPIRED";
-  if (computeRemaining(pkg) <= 0) return "EXHAUSTED";
   return "ACTIVE";
 }

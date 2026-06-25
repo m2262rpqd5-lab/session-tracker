@@ -2,7 +2,6 @@ import { clsx } from "clsx";
 
 const styles: Record<string, string> = {
   ACTIVE: "bg-green-100 text-green-700",
-  EXHAUSTED: "bg-red-100 text-red-700",
   EXPIRED: "bg-orange-100 text-orange-700",
   CANCELLED: "bg-gray-100 text-gray-500",
 };
