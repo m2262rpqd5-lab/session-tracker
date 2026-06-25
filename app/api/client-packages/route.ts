@@ -29,12 +29,35 @@ export async function POST(req: NextRequest) {
     totalSessions = Number(customSessions);
   }
 
+  // Find the most recent non-cancelled package to carry over any session deficit
+  const previousPkg = await prisma.clientPackage.findFirst({
+    where: { clientId, status: { not: "CANCELLED" } },
+    orderBy: { createdAt: "desc" },
+    include: { adjustments: true },
+  });
+
+  // Calculate how many sessions were used beyond what the previous package covered
+  let carryOver = 0;
+  if (previousPkg) {
+    const adjustmentTotal = previousPkg.adjustments.reduce((sum, a) => sum + a.delta, 0);
+    const remaining = previousPkg.totalSessions - previousPkg.usedSessions + adjustmentTotal;
+    if (remaining < 0) {
+      carryOver = Math.abs(remaining);
+    }
+    // Close out the previous package
+    await prisma.clientPackage.update({
+      where: { id: previousPkg.id },
+      data: { status: "EXHAUSTED" },
+    });
+  }
+
   const pkg = await prisma.clientPackage.create({
     data: {
       clientId,
       templateId: templateId || null,
       name,
       totalSessions,
+      usedSessions: carryOver,
       startDate: start,
       expiryDate,
     },
