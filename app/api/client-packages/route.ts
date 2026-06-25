@@ -29,16 +29,19 @@ export async function POST(req: NextRequest) {
     totalSessions = Number(customSessions);
   }
 
-  // If there's already an active package, add sessions to it instead of creating a new one
-  const activePkg = await prisma.clientPackage.findFirst({
-    where: { clientId, status: "ACTIVE" },
+  // If there's an active or exhausted package, add sessions to it (and reactivate if needed)
+  const existingPkg = await prisma.clientPackage.findFirst({
+    where: { clientId, status: { in: ["ACTIVE", "EXHAUSTED"] } },
     orderBy: { createdAt: "desc" },
   });
 
-  if (activePkg) {
+  if (existingPkg) {
     const updated = await prisma.clientPackage.update({
-      where: { id: activePkg.id },
-      data: { totalSessions: { increment: totalSessions } },
+      where: { id: existingPkg.id },
+      data: {
+        totalSessions: { increment: totalSessions },
+        status: "ACTIVE",
+      },
       include: { client: true, template: true },
     });
     return Response.json(updated, { status: 200 });
