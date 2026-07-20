@@ -41,7 +41,7 @@ export default function ClientActions({
 
   return (
     <>
-      <div className="flex gap-2 flex-wrap justify-end">
+      <div className="flex gap-2 flex-wrap md:justify-end">
         {!client.isArchived && activePackage && (
           <>
             <Btn onClick={() => setModal("session")} color="blue">Log Session</Btn>
@@ -100,7 +100,7 @@ function Btn({ onClick, children, color, disabled }: { onClick: () => void; chil
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`text-sm border px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 ${colors[color]}`}
+      className={`text-sm border px-3 py-2 md:py-1.5 rounded-lg transition-colors touch-manipulation disabled:opacity-50 ${colors[color]}`}
     >
       {children}
     </button>

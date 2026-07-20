@@ -7,7 +7,7 @@ export default function AdjustmentDeleteButton({ adjustmentId }: { adjustmentId:
   const [loading, setLoading] = useState(false);
 
   async function handleDelete() {
-    if (!confirm("Remove this adjustment? The session count change will be reversed.")) return;
+    if (!confirm("Remove this adjustment record? This cannot be undone.")) return;
     setLoading(true);
     await fetch(`/api/adjustments/${adjustmentId}`, { method: "DELETE" });
     setLoading(false);
@@ -18,7 +18,7 @@ export default function AdjustmentDeleteButton({ adjustmentId }: { adjustmentId:
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="text-xs text-red-400 hover:text-red-600 disabled:opacity-40 ml-1"
+      className="text-xs text-red-400 hover:text-red-600 disabled:opacity-40 ml-1 px-1 py-1.5 touch-manipulation"
     >
       {loading ? "…" : "Remove"}
     </button>

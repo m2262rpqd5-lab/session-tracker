@@ -18,7 +18,7 @@ export default function PackageDeleteButton({ packageId }: { packageId: string }
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="text-xs text-red-400 hover:text-red-600 disabled:opacity-40"
+      className="text-xs text-red-400 hover:text-red-600 disabled:opacity-40 px-1 py-1.5 touch-manipulation"
     >
       {loading ? "…" : "Delete"}
     </button>

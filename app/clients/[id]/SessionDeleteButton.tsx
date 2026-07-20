@@ -18,7 +18,7 @@ export default function SessionDeleteButton({ sessionId }: { sessionId: string }
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="text-xs text-red-400 hover:text-red-600 disabled:opacity-40 ml-2"
+      className="text-xs text-red-400 hover:text-red-600 disabled:opacity-40 ml-2 px-1 py-1.5 touch-manipulation"
     >
       {loading ? "…" : "Remove"}
     </button>

@@ -46,21 +46,24 @@ export default function Nav() {
       </header>
 
       {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-20 bg-white border-t border-gray-200 flex safe-bottom"
-           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-20 bg-white/95 backdrop-blur border-t border-gray-200 flex safe-bottom">
         {links.map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? path === "/" : path.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
+              aria-current={active ? "page" : undefined}
               className={clsx(
-                "flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors",
+                // min-h-14 = 56px tap target, comfortably above the 44px minimum
+                "flex-1 flex flex-col items-center justify-center gap-1 min-h-14 px-1",
+                "text-[11px] font-medium leading-none select-none touch-manipulation",
+                "transition-colors active:bg-gray-100",
                 active ? "text-gray-900" : "text-gray-400"
               )}
             >
-              <Icon size={22} strokeWidth={active ? 2.2 : 1.7} />
-              {label}
+              <Icon size={21} strokeWidth={active ? 2.2 : 1.7} />
+              <span>{label}</span>
             </Link>
           );
         })}

@@ -45,7 +45,7 @@ export default async function ClientDetailPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-gray-900">{client.name}</h1>

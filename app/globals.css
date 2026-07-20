@@ -4,6 +4,31 @@
   --font-sans: var(--font-geist-sans);
 }
 
+html {
+  /* Stop iOS from auto-inflating text in landscape */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-geist-sans), Arial, sans-serif;
+  /* Kill the grey flash on tap so buttons feel native */
+  -webkit-tap-highlight-color: transparent;
+  /* No rubber-band bounce behind the fixed tab bar */
+  overscroll-behavior-y: none;
+}
+
+/* Respect the iPhone home-indicator area */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Horizontal scroll containers shouldn't show a jittery scrollbar on mobile */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
 }

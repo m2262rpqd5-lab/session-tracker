@@ -53,7 +53,7 @@ export default function PackageEditButton({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="text-xs text-blue-400 hover:text-blue-600"
+        className="text-xs text-blue-400 hover:text-blue-600 px-1 py-1.5 touch-manipulation"
       >
         Edit
       </button>
