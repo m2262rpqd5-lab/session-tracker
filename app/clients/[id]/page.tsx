@@ -48,9 +48,6 @@ export default async function ClientDetailPage({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold text-gray-900">{client.name}</h1>
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${client.clientType === "LYO" ? "bg-purple-100 text-purple-700" : "bg-blue-50 text-blue-600"}`}>
-              {client.clientType === "LYO" ? "LYO" : "Private"}
-            </span>
           </div>
           <div className="text-sm text-gray-400 mt-0.5 space-x-3">
             {client.email && <span>{client.email}</span>}
@@ -58,7 +55,7 @@ export default async function ClientDetailPage({
           </div>
         </div>
         <ClientActions
-          client={{ id: client.id, name: client.name, isArchived: client.isArchived, currency: client.currency, clientType: client.clientType }}
+          client={{ id: client.id, name: client.name, isArchived: client.isArchived, currency: client.currency }}
           templates={templates}
           activePackage={activePackage ?? null}
         />

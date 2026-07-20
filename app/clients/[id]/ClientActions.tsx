@@ -6,7 +6,7 @@ import { CURRENCIES, formatCurrency } from "@/lib/currency";
 
 type Template = { id: string; name: string; sessionCount: number; price: number; currency: string };
 type Pkg = { id: string; name: string; status: string };
-type Client = { id: string; name: string; isArchived: boolean; currency: string; clientType: string };
+type Client = { id: string; name: string; isArchived: boolean; currency: string };
 
 export default function ClientActions({
   client,
@@ -18,7 +18,7 @@ export default function ClientActions({
   activePackage: Pkg | null;
 }) {
   const router = useRouter();
-  const [modal, setModal] = useState<"session" | "payment" | "package" | "adjustment" | "currency" | "clientType" | null>(null);
+  const [modal, setModal] = useState<"session" | "payment" | "package" | "adjustment" | "currency" | null>(null);
   const [archiving, setArchiving] = useState(false);
   const close = () => setModal(null);
   const refresh = () => { close(); router.refresh(); };
@@ -52,9 +52,6 @@ export default function ClientActions({
         {!client.isArchived && (
           <Btn onClick={() => setModal("package")} color="gray">Assign Package</Btn>
         )}
-        <Btn onClick={() => setModal("clientType")} color="gray">
-          {client.clientType === "LYO" ? "LYO" : "Private"}
-        </Btn>
         <Btn onClick={() => setModal("currency")} color="gray">
           {client.currency === "GBP" ? "£ GBP" : "﷼ SAR"}
         </Btn>
@@ -81,11 +78,6 @@ export default function ClientActions({
       {/* Adjustment */}
       <Modal open={modal === "adjustment"} onClose={close} title="Add Adjustment">
         <AdjustmentForm packageId={activePackage?.id ?? ""} onDone={refresh} />
-      </Modal>
-
-      {/* Client Type */}
-      <Modal open={modal === "clientType"} onClose={close} title="Change Client Type">
-        <ClientTypeForm clientId={client.id} current={client.clientType} onDone={refresh} />
       </Modal>
 
       {/* Currency */}
@@ -316,44 +308,6 @@ function CurrencyForm({ clientId, current, onDone }: { clientId: string; current
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
         </select>
-      </div>
-      <button type="submit" disabled={saving}
-        className="w-full bg-gray-900 text-white text-sm py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50">
-        {saving ? "Saving…" : "Save"}
-      </button>
-    </form>
-  );
-}
-
-function ClientTypeForm({ clientId, current, onDone }: { clientId: string; current: string; onDone: () => void }) {
-  const [clientType, setClientType] = useState(current);
-  const [saving, setSaving] = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    await fetch(`/api/clients/${clientId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientType }),
-    });
-    setSaving(false);
-    onDone();
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="flex gap-2">
-        {["PRIVATE", "LYO"].map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setClientType(t)}
-            className={`flex-1 text-sm py-2 rounded-lg border transition-colors ${clientType === t ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
-          >
-            {t === "PRIVATE" ? "Private" : "LYO"}
-          </button>
-        ))}
       </div>
       <button type="submit" disabled={saving}
         className="w-full bg-gray-900 text-white text-sm py-2 rounded-lg hover:bg-gray-700 disabled:opacity-50">
