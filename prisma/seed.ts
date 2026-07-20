@@ -7,10 +7,16 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   await prisma.packageTemplate.createMany({
     data: [
-      { name: "Intro Session", sessionCount: 1, price: 175, validityDays: 30 },
-      { name: "5-Session Pack", sessionCount: 5, price: 750, validityDays: 90 },
-      { name: "10-Session Pack", sessionCount: 10, price: 1500, validityDays: 180 },
-      { name: "20-Session Pack", sessionCount: 20, price: 2800, validityDays: 365 },
+      // 1:1 Personal Training (SAR)
+      { name: "1:1 – 10 Sessions", sessionCount: 10, price: 7000, currency: "SAR" },
+      { name: "1:1 – 20 Sessions", sessionCount: 20, price: 13300, currency: "SAR" },
+      { name: "1:1 – 30 Sessions", sessionCount: 30, price: 18900, currency: "SAR" },
+      { name: "1:1 – 50 Sessions", sessionCount: 50, price: 28000, currency: "SAR" },
+      // 2:1 Personal Training (SAR)
+      { name: "2:1 – 10 Sessions", sessionCount: 10, price: 9600, currency: "SAR" },
+      { name: "2:1 – 20 Sessions", sessionCount: 20, price: 18240, currency: "SAR" },
+      { name: "2:1 – 30 Sessions", sessionCount: 30, price: 25920, currency: "SAR" },
+      { name: "2:1 – 50 Sessions", sessionCount: 50, price: 38400, currency: "SAR" },
     ],
   });
   console.log("Seeded package templates.");
