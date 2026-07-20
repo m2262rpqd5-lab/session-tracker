@@ -18,9 +18,10 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Respect the iPhone home-indicator area */
+/* Respect the iPhone home-indicator area, plus breathing room so the
+   tab labels never sit against the bottom edge of the screen */
 .safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
 }
 
 /* Horizontal scroll containers shouldn't show a jittery scrollbar on mobile */

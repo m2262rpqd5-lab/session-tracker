@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full bg-gray-50 text-gray-900">
         <Nav />
         {/* extra bottom padding on mobile so content isn't hidden behind the tab bar */}
-        <main className="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-8">{children}</main>
+        <main className="max-w-6xl mx-auto px-4 py-6 pb-32 md:pb-8">{children}</main>
       </body>
     </html>
   );

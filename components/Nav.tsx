@@ -46,7 +46,7 @@ export default function Nav() {
       </header>
 
       {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-20 bg-white/95 backdrop-blur border-t border-gray-200 flex safe-bottom">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-20 bg-white/95 backdrop-blur border-t border-gray-200 flex pt-2 safe-bottom">
         {links.map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? path === "/" : path.startsWith(href);
           return (
@@ -55,14 +55,14 @@ export default function Nav() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={clsx(
-                // min-h-14 = 56px tap target, comfortably above the 44px minimum
-                "flex-1 flex flex-col items-center justify-center gap-1 min-h-14 px-1",
-                "text-[11px] font-medium leading-none select-none touch-manipulation",
+                // min-h-16 = 64px tap target, well clear of the 44px minimum
+                "flex-1 flex flex-col items-center justify-center gap-1.5 min-h-16 px-2 rounded-xl",
+                "text-xs font-medium leading-none select-none touch-manipulation",
                 "transition-colors active:bg-gray-100",
                 active ? "text-gray-900" : "text-gray-400"
               )}
             >
-              <Icon size={21} strokeWidth={active ? 2.2 : 1.7} />
+              <Icon size={23} strokeWidth={active ? 2.2 : 1.7} />
               <span>{label}</span>
             </Link>
           );
