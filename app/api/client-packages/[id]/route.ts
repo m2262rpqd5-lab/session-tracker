@@ -6,10 +6,23 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { status } = await req.json();
+  const { status, name, totalSessions, usedSessions } = await req.json();
+
+  if (totalSessions !== undefined && (isNaN(Number(totalSessions)) || Number(totalSessions) < 0)) {
+    return Response.json({ error: "Total sessions must be 0 or more" }, { status: 400 });
+  }
+  if (usedSessions !== undefined && (isNaN(Number(usedSessions)) || Number(usedSessions) < 0)) {
+    return Response.json({ error: "Used sessions must be 0 or more" }, { status: 400 });
+  }
+
   const pkg = await prisma.clientPackage.update({
     where: { id },
-    data: { status },
+    data: {
+      ...(status !== undefined && { status }),
+      ...(name !== undefined && { name }),
+      ...(totalSessions !== undefined && { totalSessions: Number(totalSessions) }),
+      ...(usedSessions !== undefined && { usedSessions: Number(usedSessions) }),
+    },
   });
   return Response.json(pkg);
 }

@@ -11,6 +11,7 @@ import SessionDeleteButton from "./SessionDeleteButton";
 import PaymentDeleteButton from "./PaymentDeleteButton";
 import AdjustmentDeleteButton from "./AdjustmentDeleteButton";
 import PackageDeleteButton from "./PackageDeleteButton";
+import PackageEditButton from "./PackageEditButton";
 
 export default async function ClientDetailPage({
   params,
@@ -109,6 +110,12 @@ export default async function ClientDetailPage({
             <span className="text-sm font-medium text-gray-700">{pkg.name}</span>
             <div className="flex items-center gap-3">
               <StatusBadge status={pkg.status} />
+              <PackageEditButton
+                packageId={pkg.id}
+                name={pkg.name}
+                totalSessions={pkg.totalSessions}
+                usedSessions={pkg.usedSessions}
+              />
               <PackageDeleteButton packageId={pkg.id} />
             </div>
           </div>
