@@ -55,14 +55,14 @@ export default function Nav() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={clsx(
-                // min-h-16 = 64px tap target, well clear of the 44px minimum
-                "flex-1 flex flex-col items-center justify-center gap-1.5 min-h-16 px-2 rounded-xl",
+                // 60px tap target — comfortably above the 44px minimum without feeling bulky
+                "flex-1 flex flex-col items-center justify-center gap-1.5 min-h-[60px] px-2 rounded-xl",
                 "text-xs font-medium leading-none select-none touch-manipulation",
                 "transition-colors active:bg-gray-100",
                 active ? "text-gray-900" : "text-gray-400"
               )}
             >
-              <Icon size={23} strokeWidth={active ? 2.2 : 1.7} />
+              <Icon size={22} strokeWidth={active ? 2.2 : 1.7} />
               <span>{label}</span>
             </Link>
           );
