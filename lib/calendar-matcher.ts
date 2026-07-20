@@ -5,9 +5,10 @@ type ClientLike = { id: string; name: string };
 export type MatchResult = {
   client: ClientLike;
   confidence: number;
+  isLateCancel: boolean;
 };
 
-const NOISE_WORDS = /session|coaching|therapy|call|meeting|check.?in|follow.?up|appt|appointment/gi;
+const NOISE_WORDS = /late\s*cancel(?:lation)?|session|coaching|therapy|call|meeting|check.?in|follow.?up|appt|appointment/gi;
 
 export function matchEventToClient(
   eventTitle: string,
@@ -15,7 +16,15 @@ export function matchEventToClient(
 ): MatchResult | null {
   if (!clients.length) return null;
 
-  const cleaned = eventTitle.toLowerCase().replace(NOISE_WORDS, "").replace(/[-–—|]/g, " ").trim();
+  const isLateCancel = /late\s*cancel/i.test(eventTitle);
+  const cleaned = eventTitle.toLowerCase().replace(NOISE_WORDS, "").replace(/[-–—|:]/g, " ").replace(/\s+/g, " ").trim();
+
+  // Build a map of first names → how many clients share it (for ambiguity check)
+  const firstNameCount: Record<string, number> = {};
+  for (const c of clients) {
+    const first = c.name.toLowerCase().split(/\s+/)[0];
+    firstNameCount[first] = (firstNameCount[first] ?? 0) + 1;
+  }
 
   const scores: MatchResult[] = clients.map((client) => {
     const name = client.name.toLowerCase();
@@ -27,14 +36,15 @@ export function matchEventToClient(
     if (cleaned.includes(name)) {
       score = 1.0;
     } else if (last && cleaned.includes(last)) {
-      score = 0.85;
+      score = 0.9;
     } else if (cleaned.includes(first) && first.length > 2) {
-      score = 0.6;
+      // Unambiguous first name → high confidence; shared first name → lower
+      score = firstNameCount[first] === 1 ? 0.9 : 0.6;
     } else {
       score = levenshteinSimilarity(cleaned, name) * 0.9;
     }
 
-    return { client, confidence: score };
+    return { client, confidence: score, isLateCancel };
   });
 
   const best = scores.sort((a, b) => b.confidence - a.confidence)[0];

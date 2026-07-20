@@ -7,6 +7,7 @@
  * the Shortcuts sync, and queues new events as PendingCalendarEvents.
  */
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/app/generated/prisma";
 import { NextRequest } from "next/server";
 import { matchEventToClient } from "@/lib/calendar-matcher";
 import crypto from "crypto";
@@ -173,21 +174,37 @@ export async function POST(req: NextRequest) {
       });
 
       if (activePkg) {
-        await prisma.$transaction([
+        const ops: Prisma.PrismaPromise<unknown>[] = [
           prisma.session.create({
             data: {
               clientPackageId: activePkg.id,
               sessionDate: startDate,
               source: "CALENDAR_SYNC",
               calendarEventId,
-              notes: null,
+              notes: match.isLateCancel ? "Late Cancel" : null,
             },
           }),
           prisma.clientPackage.update({
             where: { id: activePkg.id },
             data: { usedSessions: { increment: 1 } },
           }),
-        ]);
+        ];
+
+        // Late cancel: also add an adjustment record as a marker (delta 0 = no extra count change)
+        if (match.isLateCancel) {
+          ops.push(
+            prisma.adjustment.create({
+              data: {
+                clientPackageId: activePkg.id,
+                delta: 0,
+                reason: "Late Cancel",
+                adjustedAt: startDate,
+              },
+            })
+          );
+        }
+
+        await prisma.$transaction(ops);
         counts.autoLogged++;
         continue;
       }
