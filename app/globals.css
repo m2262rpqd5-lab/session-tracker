@@ -21,7 +21,7 @@ body {
 /* Respect the iPhone home-indicator area, plus breathing room so the
    tab labels never sit against the bottom edge of the screen */
 .safe-bottom {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 6px);
 }
 
 /* Horizontal scroll containers shouldn't show a jittery scrollbar on mobile */
