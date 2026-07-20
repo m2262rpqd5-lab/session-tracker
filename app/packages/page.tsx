@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Modal } from "@/components/Modal";
 import { CURRENCIES, formatCurrency } from "@/lib/currency";
 
@@ -116,6 +116,20 @@ export default function PackagesPage() {
     load();
   }
 
+  // Group templates into labeled sections by name prefix, sorted by session count
+  const groupDefs = [
+    { label: "1-to-1 Personal Training", match: (n: string) => /^1\s*[:-]\s*1/.test(n) || /^1\s*to\s*1/i.test(n) },
+    { label: "2-to-1 Personal Training", match: (n: string) => /^2\s*[:-]\s*1/.test(n) || /^2\s*to\s*1/i.test(n) },
+  ];
+  const groups = groupDefs
+    .map((g) => ({
+      label: g.label,
+      items: templates.filter((t) => g.match(t.name)).sort((a, b) => a.sessionCount - b.sessionCount),
+    }))
+    .filter((g) => g.items.length > 0);
+  const otherItems = templates.filter((t) => !groupDefs.some((g) => g.match(t.name)));
+  if (otherItems.length > 0) groups.push({ label: "Other", items: otherItems });
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -144,30 +158,39 @@ export default function PackagesPage() {
             {loaded && templates.length === 0 && (
               <tr><td colSpan={6} className="px-5 py-6 text-sm text-gray-400 text-center italic">No templates yet.</td></tr>
             )}
-            {templates.map((t) => (
-              <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="px-5 py-4 font-medium text-gray-900">{t.name}</td>
-                <td className="px-5 py-4 text-gray-600">{t.sessionCount}</td>
-                <td className="px-5 py-4 text-gray-600">
-                  <div>{formatCurrency(t.price, t.currency)}</div>
-                  {t.currency === "GBP" ? (
-                    <div className="text-xs text-gray-400">≈ {formatCurrency(Math.round(t.price * gbpToSar), "SAR")}</div>
-                  ) : (
-                    <div className="text-xs text-gray-400">≈ {formatCurrency(Math.round(t.price / gbpToSar), "GBP")}</div>
-                  )}
-                </td>
-                <td className="px-5 py-4 text-gray-600">{t.validityDays ? `${t.validityDays} days` : "—"}</td>
-                <td className="px-5 py-4">
-                  <button onClick={() => toggle(t)}
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full transition-colors ${t.isActive ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>
-                    {t.isActive ? "Active" : "Inactive"}
-                  </button>
-                </td>
-                <td className="px-5 py-4 text-right flex items-center justify-end gap-3">
-                  <button onClick={() => openEdit(t)} className="text-xs text-blue-400 hover:text-blue-600">Edit</button>
-                  <button onClick={() => deleteTemplate(t)} className="text-xs text-red-400 hover:text-red-600">Delete</button>
-                </td>
-              </tr>
+            {loaded && groups.map((group) => (
+              <Fragment key={group.label}>
+                <tr className="bg-gray-50/70 border-b border-gray-100">
+                  <td colSpan={6} className="px-5 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                    {group.label}
+                  </td>
+                </tr>
+                {group.items.map((t) => (
+                  <tr key={t.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="px-5 py-4 font-medium text-gray-900">{t.name}</td>
+                    <td className="px-5 py-4 text-gray-600">{t.sessionCount}</td>
+                    <td className="px-5 py-4 text-gray-600">
+                      <div>{formatCurrency(t.price, t.currency)}</div>
+                      {t.currency === "GBP" ? (
+                        <div className="text-xs text-gray-400">≈ {formatCurrency(Math.round(t.price * gbpToSar), "SAR")}</div>
+                      ) : (
+                        <div className="text-xs text-gray-400">≈ {formatCurrency(Math.round(t.price / gbpToSar), "GBP")}</div>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 text-gray-600">{t.validityDays ? `${t.validityDays} days` : "—"}</td>
+                    <td className="px-5 py-4">
+                      <button onClick={() => toggle(t)}
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full transition-colors ${t.isActive ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}>
+                        {t.isActive ? "Active" : "Inactive"}
+                      </button>
+                    </td>
+                    <td className="px-5 py-4 text-right flex items-center justify-end gap-3">
+                      <button onClick={() => openEdit(t)} className="text-xs text-blue-400 hover:text-blue-600">Edit</button>
+                      <button onClick={() => deleteTemplate(t)} className="text-xs text-red-400 hover:text-red-600">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </Fragment>
             ))}
           </tbody>
         </table>
